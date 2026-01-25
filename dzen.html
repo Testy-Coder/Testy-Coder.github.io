@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Минутка спокойствия</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;1,700&display=swap');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .quote-text {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .btn-glow:hover {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="glass-card max-w-2xl w-full p-8 md:p-12 text-white relative">
+        <div id="content-area" class="text-center fade-in">
+            <span class="text-xs uppercase tracking-widest opacity-70 mb-4 block">Мудрость дня</span>
+            
+            <div class="relative py-6">
+                <svg class="absolute top-0 left-0 w-8 h-8 opacity-20 fill-current" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017C11.4647 12 11.017 11.5523 11.017 11V6C11.017 4.89543 11.9124 4 13.017 4H19.017C21.2261 4 23.017 5.79086 23.017 8V15C23.017 17.2091 21.2261 19 19.017 19H17.017C15.3601 19 14.017 19.8954 14.017 21ZM3.017 21L3.017 18C3.017 16.8954 3.91243 16 5.017 16H8.017C8.56928 16 9.017 15.5523 9.017 15V9C9.017 8.44772 8.56928 8 8.017 8H4.017C3.46472 8 3.017 8.44772 3.017 9V11C3.017 11.5523 2.56928 12 2.017 12H1.017C0.464718 12 0.017 11.5523 0.017 11V6C0.017 4.89543 0.912429 4 2.017 4H8.017C10.2261 4 12.017 5.79086 12.017 8V15C12.017 17.2091 10.2261 19 8.017 19H6.017C4.36014 19 3.017 19.8954 3.017 21Z"/></svg>
+                <h1 id="quote" class="quote-text text-2xl md:text-4xl font-light italic leading-snug mb-4 px-6 pt-4">
+                    Загрузка спокойствия...
+                </h1>
+            </div>
+            
+            <p id="author" class="text-lg font-medium opacity-80 mb-10">— Автор</p>
+
+            <div class="flex flex-wrap justify-center gap-4">
+                <button onclick="generateQuote()" class="btn-glow bg-white text-gray-900 px-8 py-3 rounded-full font-semibold transition-all duration-300">
+                    Новая мысль
+                </button>
+                <button onclick="saveQuote()" class="btn-glow border border-white border-opacity-40 hover:bg-white hover:bg-opacity-10 px-8 py-3 rounded-full font-semibold transition-all duration-300">
+                    В избранное
+                </button>
+            </div>
+        </div>
+
+        <!-- Избранное -->
+        <div class="mt-12 pt-8 border-t border-white border-opacity-10">
+            <h2 class="text-sm font-semibold uppercase tracking-widest opacity-50 mb-4">Избранное</h2>
+            <div id="favorites-list" class="max-h-32 overflow-y-auto custom-scrollbar flex flex-col gap-2">
+                <p class="text-xs opacity-40 italic">Здесь будут ваши любимые цитаты...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомление -->
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-gray-900 px-6 py-2 rounded-full shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
+        Сохранено!
+    </div>
+
+    <script>
+        const quotes = [
+            { text: "Путешествие в тысячу миль начинается с первого шага.", author: "Лао-цзы" },
+            { text: "Когда вы находитесь в покое, вы слышите голос Вселенной.", author: "Дзенская мудрость" },
+            { text: "Счастье — это не пункт назначения, а способ путешествия.", author: "Маргарет Ли Ранбек" },
+            { text: "Ваш разум — это сад. Ваши мысли — это семена. Вы можете выращивать цветы или сорняки.", author: "Неизвестный" },
+            { text: "То, что вы ищете, тоже ищет вас.", author: "Руми" },
+            { text: "Не ищи путь, сам стань путем.", author: "Будда" },
+            { text: "Дисциплина — это выбор между тем, что вы хотите сейчас, и тем, что вы хотите больше всего.", author: "Авраам Линкольн" },
+            { text: "Тот, кто победил себя, сильнее того, кто победил тысячу врагов.", author: "Дхаммапада" },
+            { text: "Вчера я был умным и хотел изменить мир. Сегодня я мудрый и меняю себя.", author: "Руми" },
+            { text: "Жизнь — это то, что происходит, пока вы строите другие планы.", author: "Джон Леннон" }
+        ];
+
+        let currentQuote = null;
+        const quoteEl = document.getElementById('quote');
+        const authorEl = document.getElementById('author');
+        const contentArea = document.getElementById('content-area');
+        const favoritesList = document.getElementById('favorites-list');
+        const toast = document.getElementById('toast');
+
+        function generateQuote() {
+            // Анимация затухания
+            contentArea.classList.remove('fade-in');
+            void contentArea.offsetWidth; // Force reflow
+            contentArea.classList.add('fade-in');
+
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            currentQuote = quotes[randomIndex];
+            
+            quoteEl.innerText = currentQuote.text;
+            authorEl.innerText = `— ${currentQuote.author}`;
+        }
+
+        function saveQuote() {
+            if (!currentQuote) return;
+            
+            // Если список пуст, очищаем заглушку
+            if (favoritesList.innerText.includes('Здесь будут')) {
+                favoritesList.innerHTML = '';
+            }
+
+            // Создаем элемент списка
+            const fav = document.createElement('div');
+            fav.className = 'text-xs bg-white bg-opacity-10 p-2 rounded border border-white border-opacity-5 animate-pulse';
+            fav.innerHTML = `<span class="italic">"${currentQuote.text.substring(0, 40)}..."</span> — ${currentQuote.author}`;
+            
+            favoritesList.prepend(fav);
+            setTimeout(() => fav.classList.remove('animate-pulse'), 1000);
+
+            showToast();
+        }
+
+        function showToast() {
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        }
+
+        // Инициализация
+        window.onload = generateQuote;
+    </script>
+</body>
+</html>

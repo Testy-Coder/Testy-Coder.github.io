@@ -94,7 +94,28 @@
                         <span class="bg-slate-700/50 text-sky-300 px-3 py-1 rounded-md text-xs font-medium">GameDev</span>
                     </div>
                     <a href="/Miheytale.html" class="inline-flex items-center justify-center bg-white text-slate-900 px-6 py-2.5 rounded-lg font-bold hover:bg-sky-100 transition w-full">
-                        Запустить игру
+                        Играть
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Проект: Генератор дзен - цитат -->
+                <div class="project-card bg-slate-800/50 p-5 sm:p-6 rounded-2xl flex flex-col h-full">
+                    <div class="w-full aspect-video bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl mb-6 flex items-center justify-center">
+                        <span class="text-3xl sm:text-4xl font-bold text-white drop-shadow-md">Dzen</span>
+                    </div>
+                    <h3 class="text-xl sm:text-2xl font-bold mb-3">Генератор дзен - цитат</h3>
+                    <p class="text-slate-400 text-sm sm:text-base mb-6 flex-grow leading-relaxed">
+                        Генератор дзен - цитат, созданный по приколу. Получите несколько философских цитат не выходя из браузера.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <span class="bg-slate-700/50 text-sky-300 px-3 py-1 rounded-md text-xs font-medium">HTML5</span>
+                        <span class="bg-slate-700/50 text-sky-300 px-3 py-1 rounded-md text-xs font-medium">CSS</span>
+                    </div>
+                    <a href="/Dzen.html" class="inline-flex items-center justify-center bg-white text-slate-900 px-6 py-2.5 rounded-lg font-bold hover:bg-sky-100 transition w-full">
+                        Запустить
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                         </svg>

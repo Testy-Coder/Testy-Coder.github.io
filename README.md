@@ -108,7 +108,7 @@
                     </div>
                     <h3 class="text-xl sm:text-2xl font-bold mb-3">Генератор дзен - цитат</h3>
                     <p class="text-slate-400 text-sm sm:text-base mb-6 flex-grow leading-relaxed">
-                        Генератор дзен - цитат, созданный по приколу. Получите несколько философских цитат не выходя из браузера.
+                        Генератор дзен - цитат, сделанный по приколу. Получите несколько философских цитат не выходя из браузера.
                     </p>
                     <div class="flex flex-wrap gap-2 mb-6">
                         <span class="bg-slate-700/50 text-sky-300 px-3 py-1 rounded-md text-xs font-medium">HTML5</span>

@@ -61,15 +61,13 @@
     </div>
 
     <script>
-        // --- Усовершенствованный Аудио Движок ---
+        // --- Аудио Движок ---
         let audioCtx = null;
         let noiseBuffer = null;
 
         function initAudio() {
             if (audioCtx) return;
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Генерируем буфер шума заранее для оптимизации
             const bufferSize = audioCtx.sampleRate * 1.0;
             noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = noiseBuffer.getChannelData(0);
@@ -81,11 +79,8 @@
         function playSound(type) {
             if (!audioCtx) initAudio();
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
             const now = audioCtx.currentTime;
-
             if (type === 'step') {
-                // 1. "Удар" стопы (Низкие частоты)
                 const osc = audioCtx.createOscillator();
                 const oscGain = audioCtx.createGain();
                 osc.type = 'sine';
@@ -97,35 +92,26 @@
                 oscGain.connect(audioCtx.destination);
                 osc.start(now);
                 osc.stop(now + 0.1);
-
-                // 2. "Шорох" (Шум с фильтром)
                 const noiseSource = audioCtx.createBufferSource();
                 noiseSource.buffer = noiseBuffer;
                 const noiseFilter = audioCtx.createBiquadFilter();
                 const noiseGain = audioCtx.createGain();
-
                 noiseFilter.type = 'bandpass';
                 noiseFilter.frequency.setValueAtTime(800 + Math.random() * 400, now);
                 noiseFilter.Q.setValueAtTime(1, now);
-
                 noiseGain.gain.setValueAtTime(0.04, now);
                 noiseGain.gain.linearRampToValueAtTime(0, now + 0.08);
-
                 noiseSource.connect(noiseFilter);
                 noiseFilter.connect(noiseGain);
                 noiseGain.connect(audioCtx.destination);
-
-                noiseSource.start(now, Math.random() * 0.9); // Случайное смещение в буфере
+                noiseSource.start(now, Math.random() * 0.9);
                 noiseSource.stop(now + 0.08);
                 return;
             }
-
-            // Остальные звуки (jump, break, place)
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-
             switch(type) {
                 case 'jump':
                     osc.type = 'triangle';
@@ -158,6 +144,10 @@
         }
 
         // --- Константы и переменные мира ---
+        const MAX_FPS = 60; 
+        const FRAME_DURATION = 1000 / MAX_FPS; // ~16.66ms
+        let lastFrameTime = performance.now();
+
         const CHUNK_SIZE = 16;
         const RENDER_DISTANCE = 3; 
         const PLAYER_HEIGHT = 1.7;
@@ -176,9 +166,8 @@
         let currentType = 'grass';
         const blockTypes = ['grass', 'dirt', 'stone', 'cobblestone'];
         let materials = {};
-        
         let lastStepTime = 0;
-        const stepInterval = 350; // Интервал между шагами
+        const stepInterval = 350;
 
         function createTexture(type) {
             const canvas = document.createElement('canvas');
@@ -217,7 +206,6 @@
                 this.meshes = {};
                 this.group = new THREE.Group();
                 this.group.position.set(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE);
-                
                 const cacheKey = `${cx},${cz}`;
                 if (chunkCache.has(cacheKey)) {
                     this.data = chunkCache.get(cacheKey);
@@ -225,10 +213,8 @@
                     this.generate();
                     chunkCache.set(cacheKey, this.data);
                 }
-                
                 this.updateVisuals();
             }
-
             generate() {
                 for(let x = 0; x < CHUNK_SIZE; x++) {
                     for(let z = 0; z < CHUNK_SIZE; z++) {
@@ -236,39 +222,31 @@
                         const gz = this.cz * CHUNK_SIZE + z;
                         const n = simplex.noise2D(gx * 0.03, gz * 0.03) * 8;
                         const h = Math.floor(n + 15);
-                        
                         this.setBlock(x, h, z, 'grass');
                         for(let y = h - 1; y > h - 4; y--) this.setBlock(x, y, z, 'dirt');
                         for(let y = h - 4; y > 0; y--) this.setBlock(x, y, z, 'stone');
                     }
                 }
             }
-
             setBlock(x, y, z, type) {
                 if (type) this.data.set(`${x},${y},${z}`, type);
                 else this.data.delete(`${x},${y},${z}`);
             }
-
             getBlock(x, y, z) {
                 return this.data.get(`${x},${y},${z}`);
             }
-
             updateVisuals() {
                 Object.values(this.meshes).forEach(m => this.group.remove(m));
                 this.meshes = {};
-
                 const geometry = new THREE.BoxGeometry(1, 1, 1);
                 const buckets = {};
-
                 this.data.forEach((type, key) => {
                     if (!buckets[type]) buckets[type] = [];
                     buckets[type].push(key.split(',').map(Number));
                 });
-
                 blockTypes.forEach(type => {
                     const posArr = buckets[type];
                     if(!posArr || posArr.length === 0) return;
-
                     const imesh = new THREE.InstancedMesh(geometry, materials[type], posArr.length);
                     const dummy = new THREE.Object3D();
                     posArr.forEach((p, i) => {
@@ -279,10 +257,8 @@
                     this.meshes[type] = imesh;
                     this.group.add(imesh);
                 });
-
                 if (!this.group.parent) scene.add(this.group);
             }
-
             dispose() {
                 scene.remove(this.group);
                 Object.values(this.meshes).forEach(m => {
@@ -296,24 +272,19 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87ceeb);
             scene.fog = new THREE.Fog(0x87ceeb, 30, RENDER_DISTANCE * CHUNK_SIZE * 1.5);
-
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
             renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio > 1 ? 2 : 1);
             document.body.appendChild(renderer.domElement);
-
             scene.add(new THREE.AmbientLight(0xffffff, 0.7));
             const sun = new THREE.DirectionalLight(0xffffff, 0.5);
             sun.position.set(10, 20, 10);
             scene.add(sun);
-
             blockTypes.forEach(t => {
                 textures[t] = createTexture(t);
                 if (t === 'grass') textures['grass_side'] = createTexture('grass_side');
             });
-
             blockTypes.forEach(type => {
                 if (type === 'grass') {
                     const side = new THREE.MeshLambertMaterial({ map: textures['grass_side'].tex });
@@ -324,24 +295,22 @@
                     materials[type] = new THREE.MeshLambertMaterial({ map: textures[type].tex });
                 }
             });
-
             blockTypes.forEach((t, i) => {
                 const slot = document.getElementById(`slot-${i}`);
                 slot.style.backgroundImage = `url(${textures[t].dataUrl})`;
                 slot.onclick = () => selectSlot(i);
             });
-
             updateWorldChunks();
             setupControls();
-            
             document.getElementById('loading').style.display = 'none';
-            animate();
+            
+            // Начинаем игровой цикл
+            animate(performance.now());
         }
 
         function updateWorldChunks() {
             const playerCX = Math.floor(player.pos.x / CHUNK_SIZE);
             const playerCZ = Math.floor(player.pos.z / CHUNK_SIZE);
-
             for(let x = playerCX - RENDER_DISTANCE; x <= playerCX + RENDER_DISTANCE; x++) {
                 for(let z = playerCZ - RENDER_DISTANCE; z <= playerCZ + RENDER_DISTANCE; z++) {
                     const key = `${x},${z}`;
@@ -350,7 +319,6 @@
                     }
                 }
             }
-
             chunks.forEach((chunk, key) => {
                 const [cx, cz] = key.split(',').map(Number);
                 if (Math.abs(cx - playerCX) > RENDER_DISTANCE || Math.abs(cz - playerCZ) > RENDER_DISTANCE) {
@@ -358,7 +326,6 @@
                     chunks.delete(key);
                 }
             });
-
             document.getElementById('chunk-coord').innerText = `${playerCX}, ${playerCZ}`;
         }
 
@@ -367,7 +334,6 @@
             const cz = Math.floor(gz / CHUNK_SIZE);
             const chunk = chunks.get(`${cx},${cz}`);
             if (!chunk) return null;
-            
             const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
             const lz = ((gz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
             return { chunk, lx, ly: Math.round(gy), lz };
@@ -382,7 +348,6 @@
                 [x, y, z], 
                 [x, y - PLAYER_HEIGHT/2, z]
             ];
-
             for (let p of checkPoints) {
                 const b = getBlockAt(Math.round(p[0]), Math.round(p[1]), Math.round(p[2]));
                 if (b && b.chunk.getBlock(b.lx, b.ly, b.lz)) return true;
@@ -393,12 +358,10 @@
         function handleInteraction(action) {
             const ray = new THREE.Raycaster();
             ray.setFromCamera(new THREE.Vector2(0,0), camera);
-            
             const allMeshes = [];
             chunks.forEach(c => {
                 Object.values(c.meshes).forEach(m => allMeshes.push(m));
             });
-
             const hits = ray.intersectObjects(allMeshes);
             if (hits.length > 0 && hits[0].distance < 6) {
                 const hit = hits[0];
@@ -406,7 +369,6 @@
                 hit.object.getMatrixAt(hit.instanceId, matrix);
                 const worldPos = new THREE.Vector3().setFromMatrixPosition(matrix);
                 worldPos.add(hit.object.parent.position);
-
                 if (action === 'remove') {
                     const b = getBlockAt(worldPos.x, worldPos.y, worldPos.z);
                     if (b) {
@@ -440,7 +402,6 @@
                 if (!audioCtx) initAudio();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
             };
-
             document.addEventListener('mousedown', (e) => {
                 onInteraction();
                 if (document.pointerLockElement !== renderer.domElement) {
@@ -449,7 +410,6 @@
                     handleInteraction(e.button === 0 ? 'remove' : 'add');
                 }
             });
-
             document.addEventListener('mousemove', (e) => {
                 if (document.pointerLockElement === renderer.domElement) {
                     controls.yaw -= e.movementX * 0.002;
@@ -459,7 +419,6 @@
                     camera.rotation.set(controls.pitch, controls.yaw, 0);
                 }
             });
-
             window.addEventListener('keydown', e => { 
                 onInteraction();
                 keys[e.code] = true; 
@@ -468,9 +427,18 @@
             window.addEventListener('keyup', e => keys[e.code] = false);
         }
 
-        function animate() {
+        function animate(timestamp) {
             requestAnimationFrame(animate);
-            
+
+            // Реальное ограничение FPS
+            const elapsed = timestamp - lastFrameTime;
+            if (elapsed < FRAME_DURATION) return; // Если времени прошло меньше чем 1/60 сек, пропускаем кадр
+
+            // Регулируем время последнего кадра так, чтобы оно было кратно FRAME_DURATION
+            // Это обеспечивает более стабильный фреймрейт даже если requestAnimationFrame плавает
+            lastFrameTime = timestamp - (elapsed % FRAME_DURATION);
+
+            // Физика и логика (выполняется 60 раз в секунду)
             player.vel.y -= GRAVITY;
             let nextY = player.pos.y + player.vel.y;
             player.onGround = false;
@@ -494,20 +462,16 @@
             let isMoving = false;
             if (move.length() > 0) {
                 move.normalize().applyEuler(new THREE.Euler(0, controls.yaw, 0)).multiplyScalar(SPEED);
-                
                 const canMoveX = !checkCollision(player.pos.x + move.x, player.pos.y, player.pos.z);
                 const canMoveZ = !checkCollision(player.pos.x, player.pos.y, player.pos.z + move.z);
-
                 if (canMoveX) player.pos.x += move.x;
                 if (canMoveZ) player.pos.z += move.z;
-                
                 if (canMoveX || canMoveZ) {
                     isMoving = true;
                     updateWorldChunks();
                 }
             }
 
-            // Ритмичный звук шагов
             if (isMoving && player.onGround) {
                 const now = performance.now();
                 if (now - lastStepTime > stepInterval) {
@@ -522,6 +486,7 @@
             }
             camera.position.copy(player.pos);
 
+            // Отрисовка
             renderer.render(scene, camera);
             updateStats();
         }
@@ -530,12 +495,11 @@
         function updateStats() {
             frameCount++;
             const now = performance.now();
-            if (now - lastFpsUpdate > 500) {
-                document.getElementById('fps').innerText = Math.round(frameCount * 2);
+            if (now - lastFpsUpdate > 1000) {
+                document.getElementById('fps').innerText = frameCount;
                 frameCount = 0;
                 lastFpsUpdate = now;
             }
-            
             const px = player.pos.x.toFixed(1);
             const py = player.pos.y.toFixed(1);
             const pz = player.pos.z.toFixed(1);

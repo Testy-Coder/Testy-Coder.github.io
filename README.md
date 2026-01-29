@@ -153,9 +153,6 @@
     <!-- Герой-секция -->
     <header class="relative flex-grow flex flex-col justify-center items-center text-center px-4 py-20 md:py-32 z-10 overflow-hidden">
         <div class="animate-fade-in max-w-4xl mx-auto">
-            <div class="inline-block mb-4 px-4 py-1 rounded-full border border-orange-500/20 bg-orange-500/5 text-orange-400 text-xs font-bold uppercase tracking-widest mono">
-                Available for projects
-            </div>
             <h1 class="text-5xl sm:text-6xl md:text-8xl font-extrabold mb-8 tracking-tighter text-white leading-tight">
                 Привет, я <span class="gradient-text">TestyLemonad</span>
             </h1>

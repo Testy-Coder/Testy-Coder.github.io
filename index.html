@@ -31,9 +31,29 @@
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             margin: 0;
+            position: relative;
+            min-height: 100vh;
         }
 
         .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ЭФФЕКТ ПУЛЬСАЦИИ (RIPPLE) - теперь глобальный */
+        .ripple-obj {
+            position: fixed; /* Используем fixed для глобального эффекта */
+            background: rgba(250, 204, 21, 0.3); 
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple-anim 0.8s ease-out forwards;
+            pointer-events: none;
+            z-index: 5; /* Поверх фона, но под контентом если нужно (или выше) */
+        }
+
+        @keyframes ripple-anim {
+            to {
+                transform: scale(8); /* Увеличил масштаб для глобальности */
+                opacity: 0;
+            }
+        }
 
         /* Стили кастомного курсора */
         #custom-cursor {
@@ -138,6 +158,8 @@
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(251, 191, 36, 0.08);
             transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
         }
 
         @media (min-width: 1024px) {
@@ -234,7 +256,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6 mb-16">
                     <h2 class="text-2xl sm:text-4xl font-black text-white whitespace-nowrap">Мои проекты</h2>
                     <div class="h-px bg-gradient-to-r from-orange-500/50 to-transparent flex-grow hidden sm:block"></div>
-                    
+
                     <div class="flex flex-wrap gap-2">
                         <button class="cursor-trigger filter-btn active text-[10px] sm:text-xs font-bold uppercase tracking-widest border border-white/10 px-4 py-2 rounded-full transition-all" data-filter="all">Все</button>
                         <button class="cursor-trigger filter-btn text-[10px] sm:text-xs font-bold uppercase tracking-widest border border-white/10 px-4 py-2 rounded-full transition-all" data-filter="html">HTML</button>
@@ -246,7 +268,7 @@
                 <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                     <!-- Miheytale -->
                     <div class="project-item cursor-trigger glass-card p-2 rounded-[2rem] group" data-category="html" data-type="real">
-                        <div class="p-4 flex flex-col h-full">
+                        <div class="p-4 flex flex-col h-full relative z-10">
                             <div class="w-full aspect-video bg-gradient-to-br from-yellow-500 to-orange-600 rounded-[1.5rem] mb-6 flex items-center justify-center overflow-hidden relative border border-white/5">
                                 <span class="relative text-3xl font-black text-white drop-shadow-2xl">Miheytale</span>
                             </div>
@@ -263,7 +285,7 @@
 
                     <!-- Dzen -->
                     <div class="project-item cursor-trigger glass-card p-2 rounded-[2rem] group" data-category="html" data-type="real">
-                        <div class="p-4 flex flex-col h-full">
+                        <div class="p-4 flex flex-col h-full relative z-10">
                             <div class="w-full aspect-video bg-gradient-to-br from-orange-400 to-yellow-500 rounded-[1.5rem] mb-6 flex items-center justify-center overflow-hidden relative border border-white/5">
                                 <span class="relative text-3xl font-black text-white drop-shadow-2xl">Dzen</span>
                             </div>
@@ -316,6 +338,27 @@
     </div>
 
     <script>
+        // Глобальный эффект пульсации
+        window.addEventListener('mousedown', (e) => {
+            const ripple = document.createElement('div');
+            ripple.classList.add('ripple-obj');
+            
+            // Размер пульсации (100px начальный)
+            const size = 100;
+            ripple.style.width = ripple.style.height = `${size}px`;
+            
+            // Позиционирование по центру клика
+            ripple.style.left = `${e.clientX - size/2}px`;
+            ripple.style.top = `${e.clientY - size/2}px`;
+            
+            document.body.appendChild(ripple);
+            
+            // Удаление после анимации
+            setTimeout(() => {
+                ripple.remove();
+            }, 800);
+        });
+
         // Курсор
         const cursor = document.getElementById('custom-cursor');
         const dot = document.getElementById('cursor-dot');

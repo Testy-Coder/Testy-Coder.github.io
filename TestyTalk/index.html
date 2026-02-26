@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Лига независимых</title>
+    <style>
+        :root { 
+            --bg: #0f1621; --panel: #17212b; --text: #f5f5f5; --accent: #5288c1; 
+            --accent-hover: #6599d1; --error: #ff5f5f; --msg-in: #182533; --msg-out: #2b5278; 
+            --input-bg: #242f3d; --border: #232e3c; --context-bg: #1c242f;
+        }
+        body.light-theme {
+            --bg: #f0f2f5; --panel: #ffffff; --text: #000000; --accent: #0088cc;
+            --accent-hover: #0077b5; --msg-in: #ffffff; --msg-out: #effdde;
+            --input-bg: #f4f4f5; --border: #dfe1e5; --context-bg: #ffffff;
+        }
+        
+        /* Глобальный запрет выделения */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -webkit-touch-callout: none !important;
+        }
+
+        /* Исключение для режима выделения */
+        .selectable {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            background: rgba(82, 136, 193, 0.2) !important;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden;
+            position: fixed; /* Предотвращает отскок прокрутки на iOS */
+            width: 100%;
+        }
+        
+        /* Экран авторизации */
+        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .auth-box { background: var(--panel); padding: 30px 20px; border-radius: 20px; width: 100%; max-width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; }
+        
+        .tabs { display: flex; margin-bottom: 20px; background: rgba(0,0,0,0.1); border-radius: 12px; padding: 4px; }
+        .tab { flex: 1; padding: 12px; cursor: pointer; border-radius: 10px; transition: 0.2s; opacity: 0.7; font-size: 14px; }
+        .tab.active { opacity: 1; background: var(--accent); color: white; font-weight: 600; }
+        
+        /* Шапка */
+        header { background: var(--panel); padding: 0 15px; height: 56px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; flex-shrink: 0; }
+        .header-left, .header-right { display: flex; align-items: center; gap: 8px; }
+        
+        /* Список сообщений */
+        #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); -webkit-overflow-scrolling: touch; }
+        .message { 
+            padding: 8px 12px; 
+            border-radius: 16px; 
+            background: var(--msg-in); 
+            align-self: flex-start; 
+            max-width: 85%; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15); 
+            border: 1px solid var(--border); 
+            position: relative; 
+            word-wrap: break-word;
+        }
+        .message.my { background: var(--msg-out); align-self: flex-end; border: none; }
+        .message .msg-info { font-size: 10px; opacity: 0.6; margin-top: 2px; text-align: right; pointer-events: none; }
+        .message b { color: var(--accent); font-size: 13px; display: block; margin-bottom: 2px; pointer-events: none; }
+        
+        /* Превью ответа */
+        .reply-preview { background: rgba(0,0,0,0.1); border-left: 3px solid var(--accent); padding: 4px 8px; font-size: 11px; margin-bottom: 4px; border-radius: 4px; opacity: 0.8; }
+
+        /* Поле ввода */
+        .input-area { background: var(--panel); padding: 8px 12px 12px 12px; border-top: 1px solid var(--border); z-index: 10; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+        #reply-bar, #edit-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.05); padding: 8px 12px; border-radius: 12px 12px 0 0; font-size: 12px; border-bottom: 1px solid var(--accent); margin-bottom: 4px; }
+        .input-row { display: flex; gap: 8px; align-items: center; }
+        
+        input { 
+            background: var(--input-bg); border: 1px solid var(--border); color: var(--text); 
+            padding: 10px 14px; border-radius: 20px; outline: none; transition: border-color 0.2s; 
+            font-size: 16px; /* 16px предотвращает авто-зум в iOS */
+            width: 100%; box-sizing: border-box; 
+            user-select: text !important; -webkit-user-select: text !important; 
+        }
+        
+        .btn-main { background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 14px; flex-shrink: 0; }
+        .icon-btn { cursor: pointer; background: none; border: none; color: var(--accent); padding: 8px; border-radius: 50%; display: flex; align-items: center; }
+
+        /* Мобильное контекстное меню */
+        #context-menu { 
+            position: fixed; background: var(--context-bg); border: 1px solid var(--border); 
+            border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 3000; 
+            min-width: 220px; display: none; overflow: hidden; 
+        }
+        .context-item { padding: 14px 18px; cursor: pointer; font-size: 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+        .context-item:last-child { border-bottom: none; }
+        .context-item.danger { color: var(--error); }
+        
+        /* Настройки */
+        #settings-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; }
+        .modal-content { background: var(--panel); padding: 25px; border-radius: 24px; width: 100%; max-width: 300px; text-align: center; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="dark-theme">
+
+<div id="auth-screen">
+    <div class="auth-box">
+        <h2 style="margin: 0 0 20px 0; font-size: 20px;">Лига независимых</h2>
+        <div class="tabs">
+            <div class="tab active" id="tab-login">Вход</div>
+            <div class="tab" id="tab-reg">Регистрация</div>
+        </div>
+        <div id="auth-form">
+            <input type="text" id="auth-user" placeholder="Логин" autocomplete="username" style="margin-bottom:10px">
+            <input type="password" id="auth-pass" placeholder="Пароль" autocomplete="current-password" style="margin-bottom:10px">
+            <div id="reg-fields" class="hidden">
+                <input type="password" id="auth-pass-confirm" placeholder="Повтор пароля" style="margin-bottom:10px">
+                <input type="password" id="auth-invite" placeholder="Код доступа" style="margin-bottom:10px">
+            </div>
+            <button id="auth-btn" class="btn-main" style="width:100%; border-radius: 12px;">Войти</button>
+            <div id="auth-error" style="color:var(--error); font-size:12px; margin-top:12px; min-height: 14px;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="context-menu"></div>
+
+<div id="settings-modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0">Настройки</h3>
+        <button id="toggle-theme-btn" class="btn-main" style="width:100%; margin-bottom:12px; background: transparent; border: 1px solid var(--accent); color: var(--accent);">Сменить тему</button>
+        <button id="close-settings-btn" class="btn-main" style="width:100%">Закрыть</button>
+    </div>
+</div>
+
+<header>
+    <div class="header-left">
+        <button class="icon-btn" id="open-settings-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+        <span style="font-weight:700">Лига</span>
+    </div>
+    <div class="header-right">
+        <span id="user-display" style="font-size:12px; opacity:0.8"></span>
+        <button id="global-logout-btn" class="icon-btn" style="color:var(--error)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+    </div>
+</header>
+
+<div id="chat-container"></div>
+
+<div class="input-area">
+    <div id="reply-bar" class="hidden">
+        <span id="reply-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">Ответ...</span>
+        <span id="cancel-reply-btn" style="padding: 4px;">✕</span>
+    </div>
+    <div id="edit-bar" class="hidden">
+        <span id="edit-text">Редактирование...</span>
+        <span id="cancel-edit-btn" style="padding: 4px;">✕</span>
+    </div>
+    <div class="input-row">
+        <input type="text" id="message-input" placeholder="Сообщение..." enterkeyhint="send">
+        <button id="send-btn" class="btn-main">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display: block;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, onChildChanged, onChildRemoved, get, set, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyC0VcGrjDffZ3FCD7x9KSJ79ujeLFTbC-o",
+        authDomain: "testy-talk.firebaseapp.com",
+        databaseURL: "https://testy-talk-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "testy-talk",
+        storageBucket: "testy-talk.firebasestorage.app",
+        messagingSenderId: "172541851795",
+        appId: "1:172541851795:web:af233412e9e47016dbb566"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    
+    let currentUser = localStorage.getItem('chat_user');
+    let replyingTo = null;
+    let editingMsg = null;
+    let isLoginMode = true;
+    let deletedForMe = JSON.parse(localStorage.getItem('deleted_msgs') || '{}');
+    const TARGET_CODE = "roboticteam548";
+
+    if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
+
+    async function hashPassword(password) {
+        const msgBuffer = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // --- AUTH ---
+    const tabLogin = document.getElementById('tab-login');
+    const tabReg = document.getElementById('tab-reg');
+    const regFields = document.getElementById('reg-fields');
+    const authBtn = document.getElementById('auth-btn');
+    const errorEl = document.getElementById('auth-error');
+
+    tabLogin.onclick = () => { isLoginMode = true; tabLogin.classList.add('active'); tabReg.classList.remove('active'); regFields.classList.add('hidden'); authBtn.innerText = "Войти"; };
+    tabReg.onclick = () => { isLoginMode = false; tabReg.classList.add('active'); tabLogin.classList.remove('active'); regFields.classList.remove('hidden'); authBtn.innerText = "Создать аккаунт"; };
+
+    authBtn.onclick = async () => {
+        const user = document.getElementById('auth-user').value.trim().toLowerCase();
+        const pass = document.getElementById('auth-pass').value.trim();
+        if(!user || !pass) return errorEl.innerText = "Заполните все поля";
+        
+        const userRef = ref(db, 'users/' + user);
+        const snap = await get(userRef);
+        const hashedPass = await hashPassword(pass);
+
+        if (isLoginMode) {
+            if (snap.exists() && snap.val().password === hashedPass) login(user);
+            else errorEl.innerText = "Ошибка входа";
+        } else {
+            const passConfirm = document.getElementById('auth-pass-confirm').value.trim();
+            const inviteCode = document.getElementById('auth-invite').value.trim();
+            if (snap.exists()) return errorEl.innerText = "Логин занят";
+            if (pass !== passConfirm) return errorEl.innerText = "Пароли не совпадают";
+            if (inviteCode !== TARGET_CODE) return errorEl.innerText = "Неверный код";
+            await set(userRef, { password: hashedPass });
+            login(user);
+        }
+    };
+
+    function login(u) {
+        currentUser = u;
+        localStorage.setItem('chat_user', u);
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('user-display').innerText = "@" + u;
+        initChat();
+    }
+    if(currentUser) login(currentUser);
+
+    // --- SETTINGS ---
+    document.getElementById('open-settings-btn').onclick = () => document.getElementById('settings-modal').style.display = 'flex';
+    document.getElementById('close-settings-btn').onclick = () => document.getElementById('settings-modal').style.display = 'none';
+    document.getElementById('toggle-theme-btn').onclick = () => {
+        const isLight = document.body.classList.toggle('light-theme');
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    };
+    document.getElementById('global-logout-btn').onclick = () => { localStorage.removeItem('chat_user'); location.reload(); };
+
+    // --- CHAT ---
+    const chat = document.getElementById('chat-container');
+    const msgInput = document.getElementById('message-input');
+
+    function initChat() {
+        onChildAdded(ref(db, 'chat_messages'), (snap) => renderMsg(snap.key, snap.val()));
+        onChildChanged(ref(db, 'chat_messages'), (snap) => {
+            const el = document.getElementById("msg-" + snap.key);
+            if(el) el.innerHTML = getMsgInner(snap.key, snap.val());
+        });
+        onChildRemoved(ref(db, 'chat_messages'), (snap) => document.getElementById("msg-" + snap.key)?.remove());
+    }
+
+    function renderMsg(id, data) {
+        if(deletedForMe[id]) return;
+        const div = document.createElement('div');
+        div.className = `message ${data.username === currentUser ? 'my' : ''}`;
+        div.id = "msg-" + id;
+        div.innerHTML = getMsgInner(id, data);
+        
+        let pressTimer;
+        const startPress = (e) => {
+            pressTimer = setTimeout(() => showContext(e, id, data), 600);
+        };
+        const cancelPress = () => clearTimeout(pressTimer);
+
+        div.addEventListener('touchstart', startPress, {passive: true});
+        div.addEventListener('touchend', cancelPress);
+        div.addEventListener('touchmove', cancelPress);
+        div.addEventListener('contextmenu', (e) => { e.preventDefault(); showContext(e, id, data); });
+        
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function getMsgInner(id, data) {
+        let reply = data.replyTo ? `<div class="reply-preview" onclick="window.scrollToMsg('${data.replyTo.id}')"><b>${data.replyTo.user}</b>${data.replyTo.text.substring(0,30)}...</div>` : '';
+        let edited = data.edited ? ' (изм.)' : '';
+        return `${reply}<b>${data.username}</b><span class="text-content">${escapeHtml(data.text)}</span><div class="msg-info">${new Date(data.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}${edited}</div>`;
+    }
+
+    // --- ACTIONS ---
+    window.scrollToMsg = (id) => {
+        const el = document.getElementById("msg-" + id);
+        if(el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.style.boxShadow = "0 0 15px var(--accent)";
+            setTimeout(() => el.style.boxShadow = "", 1500);
+        }
+    };
+
+    window.enableSelection = (id) => {
+        document.querySelectorAll('.text-content').forEach(c => c.classList.remove('selectable'));
+        const el = document.querySelector(`#msg-${id} .text-content`);
+        if(el) el.classList.add('selectable');
+        document.getElementById('context-menu').style.display = 'none';
+    };
+
+    window.copyMsgText = (text) => {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        document.getElementById('context-menu').style.display = 'none';
+    };
+
+    window.setReply = (id, user, text) => {
+        window.cancelInputState();
+        replyingTo = { id, user, text };
+        document.getElementById('reply-bar').classList.remove('hidden');
+        document.getElementById('reply-text').innerText = "Ответ " + user;
+        msgInput.focus();
+        document.getElementById('context-menu').style.display = 'none';
+    };
+
+    window.setEdit = (id, text) => {
+        window.cancelInputState();
+        editingMsg = { id, text };
+        document.getElementById('edit-bar').classList.remove('hidden');
+        msgInput.value = text;
+        msgInput.focus();
+        document.getElementById('context-menu').style.display = 'none';
+    };
+
+    window.deleteForAll = (id) => { remove(ref(db, 'chat_messages/' + id)); document.getElementById('context-menu').style.display = 'none'; };
+
+    window.deleteForMeLocal = (id) => {
+        deletedForMe[id] = true;
+        localStorage.setItem('deleted_msgs', JSON.stringify(deletedForMe));
+        document.getElementById("msg-" + id)?.remove();
+        document.getElementById('context-menu').style.display = 'none';
+    };
+
+    window.cancelInputState = () => {
+        replyingTo = null; editingMsg = null;
+        document.getElementById('reply-bar').classList.add('hidden');
+        document.getElementById('edit-bar').classList.add('hidden');
+        msgInput.value = "";
+    };
+
+    document.getElementById('cancel-reply-btn').onclick = window.cancelInputState;
+    document.getElementById('cancel-edit-btn').onclick = window.cancelInputState;
+
+    function showContext(e, id, data) {
+        const menu = document.getElementById('context-menu');
+        menu.style.display = 'block';
+        
+        const touch = e.touches ? e.touches[0] : e;
+        let x = touch.clientX;
+        let y = touch.clientY;
+        
+        // Корректировка, чтобы меню не вылезало за края
+        if (x + 220 > window.innerWidth) x = window.innerWidth - 230;
+        if (y + 250 > window.innerHeight) y = window.innerHeight - 260;
+        
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        
+        const isMy = data.username === currentUser;
+        const safeTxt = data.text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+        menu.innerHTML = `
+            <div class="context-item" onclick="window.enableSelection('${id}')">🔍 Выделить</div>
+            <div class="context-item" onclick="window.copyMsgText('${safeTxt}')">📋 Копировать текст</div>
+            <div class="context-item" onclick="window.setReply('${id}', '${data.username}', '${safeTxt}')">↩️ Ответить</div>
+            ${isMy ? `<div class="context-item" onclick="window.setEdit('${id}', '${safeTxt}')">✏️ Изменить</div>` : ''}
+            ${isMy ? `<div class="context-item danger" onclick="window.deleteForAll('${id}')">🗑️ Удалить везде</div>` : ''}
+            <div class="context-item danger" onclick="window.deleteForMeLocal('${id}')">🗑️ Удалить у себя</div>
+        `;
+    }
+
+    document.getElementById('send-btn').onclick = async () => {
+        const val = msgInput.value.trim();
+        if(!val) return;
+        if(editingMsg) {
+            await update(ref(db, 'chat_messages/' + editingMsg.id), { text: val, edited: true });
+        } else {
+            await push(ref(db, 'chat_messages'), {
+                username: currentUser,
+                text: val,
+                time: Date.now(),
+                replyTo: replyingTo
+            });
+        }
+        window.cancelInputState();
+    };
+
+    msgInput.onkeydown = (e) => { if(e.key === 'Enter') document.getElementById('send-btn').click(); };
+    window.addEventListener('click', (e) => {
+        if(!e.target.closest('.message') && !e.target.closest('#context-menu')) {
+            document.getElementById('context-menu').style.display = 'none';
+            document.querySelectorAll('.text-content').forEach(c => c.classList.remove('selectable'));
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') e.preventDefault();
+    });
+
+    function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+</script>
+</body>
+</html>

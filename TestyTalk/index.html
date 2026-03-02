@@ -82,7 +82,7 @@
             background: var(--bg); -webkit-overflow-scrolling: touch; 
             transition: background 0.3s;
         }
-        
+
         .message { 
             padding: 8px 12px; border-radius: 16px; background: var(--msg-in); align-self: flex-start; 
             max-width: 85%; box-shadow: 0 1px 2px rgba(0,0,0,0.15); border: 1px solid var(--border); 
@@ -101,7 +101,7 @@
             background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; overflow-x: auto; 
             font-family: monospace; margin: 5px 0; border-left: 3px solid var(--quote-bar);
         }
-        
+
         .text-content blockquote {
             margin: 5px 0;
             padding: 2px 0 2px 12px;
@@ -170,7 +170,7 @@
         .context-item { padding: 12px 16px; cursor: pointer; font-size: 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
         .context-item:active { background: rgba(255,255,255,0.08); }
         .context-item.danger { color: var(--error); }
-        
+
         .reaction-picker { display: flex; justify-content: space-around; padding: 10px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.1); }
         .emoji-btn { font-size: 20px; cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 5px; }
 
@@ -406,7 +406,7 @@
         const reply = data.replyTo ? `<div class="reply-preview" onclick="window.scrollToMsg('${data.replyTo.id}')"><b>${data.replyTo.user}</b>${data.replyTo.text.substring(0,30)}...</div>` : '';
         const edited = data.edited ? ' (изм.)' : '';
         const mdText = marked.parse(data.text);
-        
+
         let reactionsHtml = '';
         if (data.reactions) {
             reactionsHtml = '<div class="reactions-list">';
@@ -445,7 +445,7 @@
         const data = snap.val();
         let reactions = data.reactions || {};
         let users = reactions[emoji] || [];
-        
+
         if (users.includes(currentUser)) {
             users = users.filter(u => u !== currentUser);
         } else {
@@ -466,7 +466,7 @@
         const data = snap.val();
         const readers = data.readBy || [];
         const menu = document.getElementById('context-menu');
-        
+
         menu.innerHTML = `
             <div class="context-item" style="font-weight:bold; background: rgba(0,0,0,0.1)">👀 Прочитали:</div>
             ${readers.length ? readers.map(r => `<div class="context-item">@${r}</div>`).join('') : '<div class="context-item" style="opacity:0.5">Никто</div>'}

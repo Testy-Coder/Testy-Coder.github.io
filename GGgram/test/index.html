@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GGgram | Firebase Auth</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root { 
+            --bg: #0f1621; --panel: #17212b; --text: #f5f5f5; --accent: #5288c1; 
+            --accent-hover: #6599d1; --error: #ff5f5f; --msg-in: #182533; --msg-out: #2b5278; 
+            --input-bg: #242f3d; --border: #232e3c; --context-bg: #1c242f;
+            --read: #40a7e3; --quote-bar: #5288c1; --quote-bg: rgba(82, 136, 193, 0.15);
+            --auth-input: #1b2632;
+            --transition-speed: 0.3s;
+        }
+
+        body.light-theme {
+            --bg: #f0f2f5; --panel: #ffffff; --text: #000000; --accent: #0088cc;
+            --accent-hover: #0077b5; --msg-in: #ffffff; --msg-out: #effdde;
+            --input-bg: #f4f4f5; --border: #dfe1e5; --context-bg: #ffffff;
+            --read: #4caf50; --quote-bar: #0088cc; --quote-bg: rgba(0, 136, 204, 0.08);
+            --auth-input: #f0f2f5;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            color: var(--text); margin: 0; display: flex; flex-direction: column; 
+            height: 100vh; height: 100dvh; background: var(--bg); overflow: hidden;
+        }
+
+        /* Auth Screen */
+        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .auth-box { background: var(--panel); padding: 30px; border-radius: 28px; width: 100%; max-width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); text-align: center; }
+        .auth-input-group { margin-bottom: 16px; text-align: left; }
+        .auth-input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 6px; color: var(--accent); text-transform: uppercase; }
+        .auth-field { width: 100%; background: var(--auth-input); border: 2px solid transparent; border-radius: 14px; padding: 12px 16px; color: var(--text); font-size: 16px; outline: none; }
+        .auth-field:focus { border-color: var(--accent); background: var(--panel); }
+        
+        /* App Components */
+        header { background: var(--panel); height: 56px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); flex-shrink: 0; position: relative; }
+        #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
+        .message { padding: 8px 12px; border-radius: 16px; background: var(--msg-in); align-self: flex-start; max-width: 85%; border: 1px solid var(--border); position: relative; word-wrap: break-word; user-select: text; -webkit-user-select: text;}
+        .message.my { background: var(--msg-out); align-self: flex-end; border: none; }
+        
+        .input-area { background: var(--panel); padding: 10px; border-top: 1px solid var(--border); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+        .input-row { display: flex; gap: 10px; align-items: flex-end; }
+        #message-input { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: 22px; flex: 1; font-size: 15px; resize: none; outline: none; max-height: 150px; }
+
+        .btn-main { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; width: 100%; }
+        .btn-main:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-main:disabled { background: #444; cursor: not-allowed; }
+        
+        .icon-btn { background: none; border: none; color: var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px; }
+        .hidden { display: none !important; }
+        
+        #recaptcha-container { margin-top: 10px; }
+        #auth-error { color: var(--error); font-size: 12px; margin-top: 10px; min-height: 15px; }
+
+        /* Context Menu & Modal */
+        #context-menu { position: fixed; background: var(--context-bg); border: 1px solid var(--border); border-radius: 20px; z-index: 3000; min-width: 200px; display: none; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .context-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 14px; }
+        #settings-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-box { background: var(--panel); width: 100%; max-width: 320px; border-radius: 24px; padding: 24px; }
+    </style>
+</head>
+<body class="dark-theme">
+
+<div id="auth-screen">
+    <div class="auth-box">
+        <div style="margin-bottom: 20px;">
+            <h2 style="margin: 0;">GGgram</h2>
+            <p style="opacity: 0.5; font-size: 12px;">Вход по номеру телефона</p>
+        </div>
+
+        <!-- Этап 1: Ввод номера -->
+        <div id="step-phone">
+            <div class="auth-input-group">
+                <label>Номер телефона</label>
+                <input type="tel" id="auth-phone" class="auth-field" placeholder="+7 900 000 00 00">
+            </div>
+            <div id="recaptcha-container"></div>
+            <button id="send-code-btn" class="btn-main" style="margin-top: 15px;">Получить код</button>
+        </div>
+
+        <!-- Этап 2: Ввод кода СМС -->
+        <div id="step-code" class="hidden">
+            <div class="auth-input-group">
+                <label>Код из СМС</label>
+                <input type="number" id="auth-sms-code" class="auth-field" placeholder="000000">
+            </div>
+            <button id="verify-code-btn" class="btn-main" style="margin-top: 15px;">Подтвердить</button>
+            <button id="back-to-phone" style="background:none; border:none; color:var(--accent); margin-top:15px; font-size:12px; cursor:pointer;">Изменить номер</button>
+        </div>
+
+        <p id="auth-error"></p>
+    </div>
+</div>
+
+<header>
+    <div class="header-left">
+        <button class="icon-btn" id="open-settings-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+        <span style="font-weight:700">GGgram</span>
+    </div>
+    <div class="header-right">
+        <span id="user-display" style="font-size:12px; font-weight: 600; opacity: 0.8; margin-right: 10px;"></span>
+        <button id="global-logout-btn" class="icon-btn" style="color:var(--error)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
+</header>
+
+<div id="chat-container"></div>
+
+<div class="input-area">
+    <div class="input-row">
+        <textarea id="message-input" placeholder="Сообщение..." rows="1"></textarea>
+        <button id="send-btn" class="btn-main" style="width: 44px; height: 44px; border-radius: 50%; padding:0; display:flex; align-items:center; justify-content:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="transform: rotate(45deg); margin-left: -2px; margin-top: 2px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+    </div>
+</div>
+
+<div id="settings-modal">
+    <div class="modal-box">
+        <h3>Настройки</h3>
+        <button id="clear-cache-btn" class="btn-main" style="background:var(--error); margin-bottom: 10px;">Очистить кэш</button>
+        <button id="close-settings-btn" class="btn-main" style="background:var(--border); color:var(--text)">Закрыть</button>
+    </div>
+</div>
+
+<div id="context-menu"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, onChildChanged, onChildRemoved, get, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // Использование ваших данных конфигурации
+    const firebaseConfig = {
+        apiKey: "AIzaSyC0VcGrjDffZ3FCD7x9KSJ79ujeLFTbC-o",
+        authDomain: "testy-talk.firebaseapp.com",
+        databaseURL: "https://testy-talk-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "testy-talk",
+        storageBucket: "testy-talk.firebasestorage.app",
+        messagingSenderId: "172541851795",
+        appId: "1:172541851795:web:af233412e9e47016dbb566"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    auth.languageCode = 'ru';
+
+    let confirmationResult = null;
+    let currentUserPhone = null;
+
+    // --- Auth Logic ---
+    const phoneInput = document.getElementById('auth-phone');
+    const smsInput = document.getElementById('auth-sms-code');
+    const errorEl = document.getElementById('auth-error');
+
+    // Инициализация Recaptcha
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'normal',
+        'callback': (response) => {}
+    });
+
+    // 1. Отправка СМС
+    document.getElementById('send-code-btn').onclick = async () => {
+        const phoneNumber = phoneInput.value.trim();
+        if(!phoneNumber.startsWith('+')) {
+            errorEl.innerText = "Номер должен начинаться с +";
+            return;
+        }
+        
+        try {
+            errorEl.innerText = "Отправка кода...";
+            confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+            document.getElementById('step-phone').classList.add('hidden');
+            document.getElementById('step-code').classList.remove('hidden');
+            errorEl.innerText = "";
+        } catch (error) {
+            console.error(error);
+            errorEl.innerText = "Ошибка: " + error.message;
+            if(window.recaptchaVerifier) window.recaptchaVerifier.render().then(id => grecaptcha.reset(id));
+        }
+    };
+
+    // 2. Подтверждение кода
+    document.getElementById('verify-code-btn').onclick = async () => {
+        const code = smsInput.value.trim();
+        if(!code || !confirmationResult) return;
+        
+        try {
+            errorEl.innerText = "Проверка...";
+            await confirmationResult.confirm(code);
+            // onAuthStateChanged сработает автоматически
+        } catch (error) {
+            errorEl.innerText = "Неверный код СМС";
+        }
+    };
+
+    document.getElementById('back-to-phone').onclick = () => {
+        document.getElementById('step-phone').classList.remove('hidden');
+        document.getElementById('step-code').classList.add('hidden');
+        errorEl.innerText = "";
+    };
+
+    // Слушатель состояния входа
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserPhone = user.phoneNumber;
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('user-display').innerText = currentUserPhone;
+            initChat();
+        } else {
+            document.getElementById('auth-screen').style.display = 'flex';
+        }
+    });
+
+    // --- Chat Logic ---
+    function initChat() {
+        const chatRef = ref(db, 'chat_messages');
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.innerHTML = ''; // Очистка при входе
+
+        onChildAdded(chatRef, (snap) => {
+            renderMsg(snap.key, snap.val());
+        });
+    }
+
+    function renderMsg(id, data) {
+        const div = document.createElement('div');
+        const isMy = data.username === currentUserPhone;
+        div.className = `message ${isMy ? 'my' : ''}`;
+        div.id = "msg-" + id;
+        
+        const time = new Date(data.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        div.innerHTML = `
+            <b style="color:var(--accent); font-size:12px">${data.username}</b>
+            <div style="margin: 4px 0;">${marked.parse(data.text)}</div>
+            <div style="text-align:right; font-size:10px; opacity:0.5;">${time}</div>
+        `;
+
+        div.oncontextmenu = (e) => {
+            if(!isMy) return;
+            e.preventDefault();
+            showContext(e, id);
+        };
+
+        document.getElementById('chat-container').appendChild(div);
+        document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
+    }
+
+    function showContext(e, id) {
+        const menu = document.getElementById('context-menu');
+        menu.style.display = 'block';
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        menu.innerHTML = `<div class="context-item" style="color:var(--error)">Удалить для всех</div>`;
+        menu.onclick = () => {
+            remove(ref(db, 'chat_messages/' + id));
+            document.getElementById('msg-' + id)?.remove();
+            menu.style.display = 'none';
+        };
+    }
+
+    document.getElementById('send-btn').onclick = async () => {
+        const inp = document.getElementById('message-input');
+        const v = inp.value.trim();
+        if(!v || !currentUserPhone) return;
+
+        await push(ref(db, 'chat_messages'), {
+            username: currentUserPhone,
+            text: v,
+            time: Date.now()
+        });
+        inp.value = "";
+    };
+
+    // UI Helpers
+    document.getElementById('global-logout-btn').onclick = () => signOut(auth);
+    document.getElementById('open-settings-btn').onclick = () => document.getElementById('settings-modal').style.display = 'flex';
+    document.getElementById('close-settings-btn').onclick = () => document.getElementById('settings-modal').style.display = 'none';
+    document.getElementById('clear-cache-btn').onclick = () => location.reload();
+
+    window.onclick = (e) => {
+        if(!e.target.closest('#context-menu')) document.getElementById('context-menu').style.display = 'none';
+        if(e.target.id === 'settings-modal') e.target.style.display = 'none';
+    };
+</script>
+</body>
+</html>

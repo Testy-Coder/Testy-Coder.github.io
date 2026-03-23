@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GGgram</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root { 
+            --bg: #0f1621; --panel: #17212b; --text: #f5f5f5; --accent: #5288c1; 
+            --accent-hover: #6599d1; --error: #ff5f5f; --msg-in: #182533; --msg-out: #2b5278; 
+            --input-bg: #242f3d; --border: #232e3c; --context-bg: #1c242f;
+            --read: #40a7e3; --quote-bar: #5288c1; --quote-bg: rgba(82, 136, 193, 0.15);
+            --auth-input: #1b2632;
+            --transition-speed: 0.3s;
+        }
+
+        body.light-theme {
+            --bg: #f0f2f5; --panel: #ffffff; --text: #000000; --accent: #0088cc;
+            --accent-hover: #0077b5; --msg-in: #ffffff; --msg-out: #effdde;
+            --input-bg: #f4f4f5; --border: #dfe1e5; --context-bg: #ffffff;
+            --read: #4caf50; --quote-bar: #0088cc; --quote-bg: rgba(0, 136, 204, 0.08);
+            --auth-input: #f0f2f5;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { font-family: -apple-system, system-ui, sans-serif; color: var(--text); margin: 0; background: var(--bg); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Auth UI */
+        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .auth-box { background: var(--panel); padding: 30px; border-radius: 28px; width: 100%; max-width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); text-align: center; }
+        .auth-input-group { margin-bottom: 16px; text-align: left; }
+        .auth-input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 6px; color: var(--accent); text-transform: uppercase; }
+        .auth-field { width: 100%; background: var(--auth-input); border: 2px solid transparent; border-radius: 14px; padding: 12px 14px; color: var(--text); font-size: 15px; outline: none; transition: 0.2s; }
+        .auth-field:focus { border-color: var(--accent); }
+        .tab { flex: 1; padding: 10px; cursor: pointer; border-radius: 11px; font-size: 13px; font-weight: 600; text-align: center; }
+
+        /* Messenger UI */
+        header { background: var(--panel); height: 56px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); }
+        #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .message { padding: 8px 12px; border-radius: 16px; background: var(--msg-in); align-self: flex-start; max-width: 85%; border: 1px solid var(--border); position: relative; word-wrap: break-word; }
+        .message.my { background: var(--msg-out); align-self: flex-end; border: none; }
+        .msg-meta { display: flex; justify-content: flex-end; gap: 4px; font-size: 10px; opacity: 0.6; margin-top: 4px; }
+        
+        .input-area { background: var(--panel); padding: 10px; border-top: 1px solid var(--border); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+        .btn-main { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; }
+        .btn-main:disabled { opacity: 0.5; }
+        .icon-btn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 8px; }
+        .hidden { display: none !important; }
+        
+        #recaptcha-container { margin: 10px 0; }
+    </style>
+</head>
+<body class="dark-theme">
+
+<div id="auth-screen">
+    <div class="auth-box">
+        <h2 style="margin: 0;">GGgram</h2>
+        <p style="opacity: 0.5; font-size: 12px; margin-bottom: 20px;">Приватный мессенджер</p>
+        
+        <div id="auth-tabs" style="display: flex; background: var(--auth-input); border-radius: 14px; padding: 4px; margin-bottom: 20px;">
+            <div class="tab" id="tab-login">Вход</div>
+            <div class="tab" id="tab-reg">Регистрация</div>
+        </div>
+
+        <div id="step-1">
+            <div class="auth-input-group">
+                <label id="id-label">Никнейм или Телефон</label>
+                <input type="text" id="auth-id" class="auth-field" placeholder="@nick или +7...">
+            </div>
+            
+            <div id="reg-fields" class="hidden">
+                <div class="auth-input-group">
+                    <label>Придумайте ник</label>
+                    <input type="text" id="reg-nick" class="auth-field" placeholder="nickname">
+                </div>
+                <div class="auth-input-group">
+                    <label>Код доступа</label>
+                    <input type="password" id="auth-secret" class="auth-field" placeholder="Секретный код">
+                </div>
+            </div>
+
+            <div id="recaptcha-container"></div>
+            <button id="btn-send-sms" class="btn-main">Получить код</button>
+        </div>
+
+        <div id="step-2" class="hidden">
+            <div class="auth-input-group">
+                <label>Код из СМС</label>
+                <input type="text" id="sms-code" class="auth-field" placeholder="000000" maxlength="6">
+            </div>
+            <button id="btn-verify-sms" class="btn-main">Подтвердить</button>
+            <button id="btn-back" class="icon-btn" style="width:100%; margin-top:10px; font-size:12px;">Вернуться назад</button>
+        </div>
+
+        <p id="error-msg" style="color:var(--error); font-size:12px; margin-top:10px; min-height: 15px;"></p>
+    </div>
+</div>
+
+<header>
+    <div class="header-left">
+        <button class="icon-btn" id="logout-btn" style="color:var(--error)">Выйти</button>
+        <span style="font-weight:700">GGgram</span>
+    </div>
+    <div class="header-right">
+        <span id="user-tag" style="font-size:12px; font-weight: 600; opacity: 0.8;"></span>
+    </div>
+</header>
+
+<div id="chat-container"></div>
+
+<div class="input-area">
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="msg-input" class="auth-field" style="flex:1" placeholder="Ваше сообщение...">
+        <button id="msg-send" class="btn-main" style="width: 44px; border-radius: 50%; padding:0;">></button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getDatabase, ref, set, get, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyC0VcGrjDffZ3FCD7x9KSJ79ujeLFTbC-o",
+        authDomain: "testy-talk.firebaseapp.com",
+        databaseURL: "https://testy-talk-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "testy-talk",
+        storageBucket: "testy-talk.firebasestorage.app",
+        messagingSenderId: "172541851795",
+        appId: "1:172541851795:web:af233412e9e47016dbb566"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    let confirmationResult = null;
+    let isLogin = true;
+    let myNick = null;
+    const SECRET = "roboticteam548";
+
+    // UI Logic
+    const tabL = document.getElementById('tab-login');
+    const tabR = document.getElementById('tab-reg');
+    const regFields = document.getElementById('reg-fields');
+    const authId = document.getElementById('auth-id');
+
+    function switchAuth(toLogin) {
+        isLogin = toLogin;
+        tabL.style.background = toLogin ? 'var(--accent)' : 'transparent';
+        tabR.style.background = !toLogin ? 'var(--accent)' : 'transparent';
+        regFields.classList.toggle('hidden', toLogin);
+        authId.placeholder = toLogin ? "@ник или +7..." : "+7...";
+        document.getElementById('id-label').innerText = toLogin ? "Ник или Телефон" : "Ваш номер телефона";
+    }
+
+    tabL.onclick = () => switchAuth(true);
+    tabR.onclick = () => switchAuth(false);
+    switchAuth(true);
+
+    // SMS Flow
+    async function sendSms() {
+        const id = authId.value.trim();
+        const err = document.getElementById('error-msg');
+        err.innerText = "";
+
+        let phone = id;
+
+        if (isLogin) {
+            // Если введен ник (начинается с @ или нет знака +)
+            if (!id.startsWith('+')) {
+                const nick = id.replace('@', '').toLowerCase();
+                const snap = await get(ref(db, `users/${nick}`));
+                if (!snap.exists()) return err.innerText = "Пользователь не найден";
+                phone = snap.val().phone;
+            }
+        } else {
+            // Регистрация: проверка ника и кода
+            const nick = document.getElementById('reg-nick').value.trim().toLowerCase();
+            const code = document.getElementById('auth-secret').value.trim();
+            if (!nick || !phone.startsWith('+')) return err.innerText = "Укажите ник и телефон +7...";
+            if (code !== SECRET) return err.innerText = "Неверный секретный код";
+            
+            const exists = await get(ref(db, `users/${nick}`));
+            if (exists.exists()) return err.innerText = "Ник занят";
+        }
+
+        try {
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
+            confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+        } catch (e) {
+            err.innerText = "Ошибка: " + e.message;
+        }
+    }
+
+    document.getElementById('btn-send-sms').onclick = sendSms;
+
+    document.getElementById('btn-verify-sms').onclick = async () => {
+        const code = document.getElementById('sms-code').value.trim();
+        const err = document.getElementById('error-msg');
+        try {
+            const res = await confirmationResult.confirm(code);
+            if (!isLogin) {
+                const nick = document.getElementById('reg-nick').value.trim().toLowerCase();
+                await set(ref(db, `users/${nick}`), { uid: res.user.uid, phone: res.user.phoneNumber });
+                await set(ref(db, `uids/${res.user.uid}`), nick);
+            }
+        } catch (e) {
+            err.innerText = "Неверный код СМС";
+        }
+    };
+
+    // Chat logic
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const nickSnap = await get(ref(db, `uids/${user.uid}`));
+            myNick = nickSnap.exists() ? nickSnap.val() : "id_" + user.uid.slice(0, 5);
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('user-tag').innerText = "@" + myNick;
+            startChat();
+        } else {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('step-1').classList.remove('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+        }
+    });
+
+    function startChat() {
+        const cont = document.getElementById('chat-container');
+        cont.innerHTML = "";
+        onChildAdded(ref(db, 'chat_messages'), (snap) => {
+            const m = snap.val();
+            const d = document.createElement('div');
+            d.className = `message ${m.user === myNick ? 'my' : ''}`;
+            d.innerHTML = `
+                <div style="font-size:11px; font-weight:bold; color:var(--accent)">@${m.user}</div>
+                <div>${marked.parse(m.text)}</div>
+                <div class="msg-meta">${new Date(m.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+            `;
+            cont.appendChild(d);
+            cont.scrollTop = cont.scrollHeight;
+        });
+    }
+
+    document.getElementById('msg-send').onclick = () => {
+        const inp = document.getElementById('msg-input');
+        if (!inp.value.trim()) return;
+        push(ref(db, 'chat_messages'), { user: myNick, text: inp.value, time: Date.now() });
+        inp.value = "";
+    };
+
+    document.getElementById('logout-btn').onclick = () => signOut(auth);
+    document.getElementById('btn-back').onclick = () => {
+        document.getElementById('step-1').classList.remove('hidden');
+        document.getElementById('step-2').classList.add('hidden');
+    };
+</script>
+</body>
+</html>

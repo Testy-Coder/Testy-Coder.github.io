@@ -1,0 +1,326 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>УльтраШифратор</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Шрифт для интерфейса */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        :root {
+            --bg-main: #121214;
+            --bg-card: #1c1c1f;
+            --accent: #6366f1;
+            --text-main: #e1e1e6;
+            --text-dim: #a1a1aa;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Убираем стандартные стили для инпутов, делаем "по-своему" */
+        .custom-input {
+            background: #29292e;
+            border: 1px solid #323238;
+            border-radius: 8px;
+            color: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            transition: filter 0.2s;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-ghost {
+            background-color: #29292e;
+            border: 1px solid #323238;
+        }
+
+        /* Анимация появления поля параметров */
+        .param-enter {
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Адаптив для карточек */
+        .step-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @media (max-width: 640px) {
+            .step-row {
+                grid-template-columns: 1fr auto;
+            }
+            .step-number { display: none; }
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-10">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Шапка -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">УльтраШифратор <span class="text-indigo-500">v2.0</span></h1>
+                <p class="text-zinc-500 text-sm mt-1"></p>
+            </div>
+            <div class="flex bg-[#1c1c1f] p-1 rounded-xl border border-[#323238]">
+                <button onclick="setDirection('encode')" id="tabEnc" class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white transition-all">Зашифровать</button>
+                <button onclick="setDirection('decode')" id="tabDec" class="px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white transition-all">Расшифровать</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+            
+            <!-- Поле ввода -->
+            <div class="bg-[#1c1c1f] border border-[#323238] rounded-2xl p-5 shadow-sm">
+                <label class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Входные данные</label>
+                <textarea id="inputText" class="custom-input w-full h-32 p-4 text-sm mono resize-none" placeholder="Введи текст сюда..."></textarea>
+            </div>
+
+            <!-- Настройка цепочки (Матрёшка) -->
+            <div class="bg-[#1c1c1f] border border-[#323238] rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center mb-5">
+                    <label class="text-xs font-bold text-zinc-500 uppercase tracking-widest">Цепочка алгоритмов (Матрёшка)</label>
+                    <button onclick="addStep()" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Добавить слой</button>
+                </div>
+                
+                <div id="stepsList" class="space-y-3">
+                    <!-- Сюда скрипт вставит шаги -->
+                </div>
+            </div>
+
+            <!-- Результат -->
+            <div class="bg-[#1c1c1f] border border-indigo-500/20 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-bold text-indigo-400 uppercase tracking-widest">Результат</label>
+                    <button onclick="copyToClipboard()" class="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        Копировать
+                    </button>
+                </div>
+                <textarea id="outputText" readonly class="custom-input w-full h-32 p-4 text-sm mono text-indigo-200 cursor-default" placeholder="Тут появится результат..."></textarea>
+                <div id="copyToast" class="hidden text-right text-[10px] text-emerald-400 mt-2 font-medium uppercase tracking-tighter">Скопировано!</div>
+            </div>
+
+        </div>
+
+        <p class="text-center text-zinc-600 text-[10px] mt-10 uppercase tracking-[0.2em]">Designed & Developed by Me</p>
+    </div>
+
+    <script>
+        const ALGORITHMS = {
+            base64: { name: "Base64", hasParam: false },
+            caesar: { name: "Шифр Цезаря", hasParam: true, default: "3" },
+            atbash: { name: "Атбаш (Зеркало)", hasParam: false },
+            layout: { name: "Смена раскладки", hasParam: false },
+            rot13: { name: "ROT13", hasParam: false },
+            hex: { name: "HEX (16-ричный)", hasParam: false },
+            binary: { name: "Двоичный код", hasParam: false },
+            reverse: { name: "Переворот", hasParam: false }
+        };
+
+        const RU_EN = {"й":"q","ц":"w","у":"e","к":"r","е":"t","н":"y","г":"u","ш":"i","щ":"o","з":"p","х":"[","ъ":"]","ф":"a","ы":"s","в":"d","а":"f","п":"g","р":"h","о":"j","л":"k","д":"l","ж":";","э":"'","я":"z","ч":"x","с":"c","м":"v","и":"b","т":"n","ь":"m","б":",","ю":".","ё":"`","Й":"Q","Ц":"W","У":"E","К":"R","Е":"T","Н":"Y","Г":"U","Ш":"I","Щ":"O","З":"P","Х":"{","Ъ":"}","Ф":"A","Ы":"S","В":"D","А":"F","П":"G","Р":"H","О":"J","Л":"K","Д":"L","Ж":":","Э":"\"","Я":"Z","Ч":"X","С":"C","М":"V","И":"B","Т":"N","Ь":"M","Б":"<","Ю":">","Ё":"~"};
+        const EN_RU = Object.fromEntries(Object.entries(RU_EN).map(([k,v])=>[v,k]));
+
+        let steps = [{ id: Date.now(), type: 'base64', param: '' }];
+        let mode = 'encode';
+
+        function init() {
+            render();
+            document.getElementById('inputText').addEventListener('input', run);
+        }
+
+        function setDirection(d) {
+            mode = d;
+            const btnEnc = document.getElementById('tabEnc');
+            const btnDec = document.getElementById('tabDec');
+            
+            if (d === 'encode') {
+                btnEnc.className = "px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white transition-all";
+                btnDec.className = "px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white transition-all";
+            } else {
+                btnDec.className = "px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white transition-all";
+                btnEnc.className = "px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white transition-all";
+            }
+            run();
+        }
+
+        function addStep() {
+            steps.push({ id: Date.now(), type: 'caesar', param: '3' });
+            render();
+            run();
+        }
+
+        function removeStep(id) {
+            if (steps.length > 1) {
+                steps = steps.filter(s => s.id !== id);
+                render();
+                run();
+            }
+        }
+
+        function updateStep(id, key, val) {
+            const s = steps.find(x => x.id === id);
+            if (s) {
+                s[key] = val;
+                // Если сменили тип на Цезаря, ставим дефолтный параметр
+                if (key === 'type' && val === 'caesar') s.param = '3';
+                render(); // Перерисовываем для скрытия/показа инпута
+                run();
+            }
+        }
+
+        function render() {
+            const list = document.getElementById('stepsList');
+            list.innerHTML = '';
+
+            steps.forEach((step, idx) => {
+                const algo = ALGORITHMS[step.type];
+                const row = document.createElement('div');
+                row.className = "step-row bg-[#232327] p-3 rounded-xl border border-[#323238]";
+                
+                let paramHtml = '';
+                // Поле сдвига появляется только для Цезаря
+                if (algo.hasParam) {
+                    paramHtml = `
+                        <input type="number" value="${step.param}" 
+                            oninput="updateStep(${step.id}, 'param', this.value)"
+                            class="custom-input w-16 px-2 py-1 text-xs text-center param-enter" 
+                            placeholder="Сдвиг">
+                    `;
+                }
+
+                row.innerHTML = `
+                    <span class="step-number text-[10px] font-bold text-zinc-600 w-4">${idx + 1}</span>
+                    <div class="flex items-center gap-2">
+                        <select onchange="updateStep(${step.id}, 'type', this.value)" 
+                            class="bg-transparent text-sm font-medium text-zinc-300 focus:outline-none cursor-pointer">
+                            ${Object.entries(ALGORITHMS).map(([k, v]) => 
+                                `<option value="${k}" ${step.type === k ? 'selected' : ''} class="bg-[#1c1c1f]">${v.name}</option>`
+                            ).join('')}
+                        </select>
+                        ${paramHtml}
+                    </div>
+                    <button onclick="removeStep(${step.id})" class="text-zinc-600 hover:text-red-400 transition-colors ml-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function run() {
+            let val = document.getElementById('inputText').value;
+            if (!val) {
+                document.getElementById('outputText').value = '';
+                return;
+            }
+
+            const activeSteps = mode === 'encode' ? [...steps] : [...steps].reverse();
+
+            activeSteps.forEach(s => {
+                val = execute(val, s.type, s.param, mode);
+            });
+
+            document.getElementById('outputText').value = val;
+        }
+
+        function execute(text, type, param, dir) {
+            const isEnc = dir === 'encode';
+            try {
+                switch(type) {
+                    case 'base64':
+                        return isEnc ? btoa(unescape(encodeURIComponent(text))) : decodeURIComponent(escape(atob(text)));
+                    case 'caesar':
+                        const s = parseInt(param) || 0;
+                        return caesar(text, isEnc ? s : -s);
+                    case 'atbash':
+                        return atbash(text);
+                    case 'layout':
+                        return text.split('').map(c => RU_EN[c] || EN_RU[c] || c).join('');
+                    case 'rot13':
+                        return caesar(text, 13);
+                    case 'hex':
+                        return isEnc ? text.split('').map(c=>c.charCodeAt(0).toString(16).padStart(2,'0')).join(' ') : text.split(' ').map(h=>String.fromCharCode(parseInt(h,16))).join('');
+                    case 'binary':
+                        return isEnc ? text.split('').map(c=>c.charCodeAt(0).toString(2).padStart(8,'0')).join(' ') : text.split(' ').map(b=>String.fromCharCode(parseInt(b,2))).join('');
+                    case 'reverse':
+                        return text.split('').reverse().join('');
+                    default: return text;
+                }
+            } catch(e) { return "!! Ошибка алгоритма !!"; }
+        }
+
+        function caesar(str, shift) {
+            if (shift < 0) shift = (shift % 33) + 33; 
+            return str.replace(/[а-яА-ЯёЁ]/g, (c) => {
+                const code = c.charCodeAt(0);
+                const start = (code <= 1071) ? 1040 : 1072;
+                return String.fromCharCode(((code - start + shift) % 32) + start);
+            }).replace(/[a-zA-Z]/g, (c) => {
+                const code = c.charCodeAt(0);
+                const start = (code <= 90) ? 65 : 97;
+                return String.fromCharCode(((code - start + shift) % 26) + start);
+            });
+        }
+
+        function atbash(str) {
+            const a = "abcdefghijklmnopqrstuvwxyz", A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const r = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", R = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+            return str.split('').map(c => {
+                if (a.includes(c)) return a[25-a.indexOf(c)];
+                if (A.includes(c)) return A[25-A.indexOf(c)];
+                if (r.includes(c)) return r[32-r.indexOf(c)];
+                if (R.includes(c)) return R[32-R.indexOf(c)];
+                return c;
+            }).join('');
+        }
+
+        function copyToClipboard() {
+            const t = document.getElementById('outputText');
+            t.select();
+            document.execCommand('copy');
+            const toast = document.getElementById('copyToast');
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2000);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

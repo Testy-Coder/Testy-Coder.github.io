@@ -91,7 +91,6 @@
         <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-bold tracking-tight">УльтраШифратор <span class="text-indigo-500"></span></h1>
-                <p class="text-zinc-500 text-sm mt-1"></p>
             </div>
             <div class="flex bg-[#1c1c1f] p-1 rounded-xl border border-[#323238]">
                 <button onclick="setDirection('encode')" id="tabEnc" class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white transition-all">Зашифровать</button>
@@ -136,7 +135,7 @@
 
         </div>
 
-        <p class="text-center text-zinc-600 text-[10px] mt-10 uppercase tracking-[0.2em]">Designed & Developed by Me</p>
+        <p class="text-center text-zinc-600 text-[10px] mt-10 uppercase tracking-[0.2em]">Designed & Developed by TestyLemonad</p>
     </div>
 
     <script>
@@ -148,7 +147,8 @@
             rot13: { name: "ROT13", hasParam: false },
             hex: { name: "HEX (16-ричный)", hasParam: false },
             binary: { name: "Двоичный код", hasParam: false },
-            reverse: { name: "Переворот", hasParam: false }
+            reverse: { name: "Переворот", hasParam: false },
+            sha256: { name: "SHA-256 (Хеш)", hasParam: false, oneWay: true }
         };
 
         const RU_EN = {"й":"q","ц":"w","у":"e","к":"r","е":"t","н":"y","г":"u","ш":"i","щ":"o","з":"p","х":"[","ъ":"]","ф":"a","ы":"s","в":"d","а":"f","п":"g","р":"h","о":"j","л":"k","д":"l","ж":";","э":"'","я":"z","ч":"x","с":"c","м":"v","и":"b","т":"n","ь":"m","б":",","ю":".","ё":"`","Й":"Q","Ц":"W","У":"E","К":"R","Е":"T","Н":"Y","Г":"U","Ш":"I","Щ":"O","З":"P","Х":"{","Ъ":"}","Ф":"A","Ы":"S","В":"D","А":"F","П":"G","Р":"H","О":"J","Л":"K","Д":"L","Ж":":","Э":"\"","Я":"Z","Ч":"X","С":"C","М":"V","И":"B","Т":"N","Ь":"M","Б":"<","Ю":">","Ё":"~"};
@@ -195,9 +195,8 @@
             const s = steps.find(x => x.id === id);
             if (s) {
                 s[key] = val;
-                // Если сменили тип на Цезаря, ставим дефолтный параметр
                 if (key === 'type' && val === 'caesar') s.param = '3';
-                render(); // Перерисовываем для скрытия/показа инпута
+                render(); 
                 run();
             }
         }
@@ -212,7 +211,6 @@
                 row.className = "step-row bg-[#232327] p-3 rounded-xl border border-[#323238]";
                 
                 let paramHtml = '';
-                // Поле сдвига появляется только для Цезаря
                 if (algo.hasParam) {
                     paramHtml = `
                         <input type="number" value="${step.param}" 
@@ -243,7 +241,7 @@
             });
         }
 
-        function run() {
+        async function run() {
             let val = document.getElementById('inputText').value;
             if (!val) {
                 document.getElementById('outputText').value = '';
@@ -252,16 +250,19 @@
 
             const activeSteps = mode === 'encode' ? [...steps] : [...steps].reverse();
 
-            activeSteps.forEach(s => {
-                val = execute(val, s.type, s.param, mode);
-            });
+            for (const s of activeSteps) {
+                val = await execute(val, s.type, s.param, mode);
+            }
 
             document.getElementById('outputText').value = val;
         }
 
-        function execute(text, type, param, dir) {
+        async function execute(text, type, param, dir) {
             const isEnc = dir === 'encode';
             try {
+                // Если мы в режиме декодирования и встретили хеш — просто игнорируем его
+                if (!isEnc && ALGORITHMS[type].oneWay) return text;
+
                 switch(type) {
                     case 'base64':
                         return isEnc ? btoa(unescape(encodeURIComponent(text))) : decodeURIComponent(escape(atob(text)));
@@ -280,9 +281,18 @@
                         return isEnc ? text.split('').map(c=>c.charCodeAt(0).toString(2).padStart(8,'0')).join(' ') : text.split(' ').map(b=>String.fromCharCode(parseInt(b,2))).join('');
                     case 'reverse':
                         return text.split('').reverse().join('');
+                    case 'sha256':
+                        return await sha256(text);
                     default: return text;
                 }
             } catch(e) { return "!! Ошибка алгоритма !!"; }
+        }
+
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
         function caesar(str, shift) {

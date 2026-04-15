@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root { 
+            /* Dark Theme (Default) */
             --bg: #0f1621; --panel: #17212b; --text: #f5f5f5; --accent: #5288c1; 
             --accent-hover: #6599d1; --error: #ff5f5f; --msg-in: #182533; --msg-out: #2b5278; 
             --input-bg: #242f3d; --border: #232e3c; --context-bg: #1c242f;
@@ -17,6 +18,7 @@
         }
 
         body.light-theme {
+            /* Light Theme */
             --bg: #f0f2f5; --panel: #ffffff; --text: #000000; --accent: #0088cc;
             --accent-hover: #0077b5; --msg-in: #ffffff; --msg-out: #effdde;
             --input-bg: #f4f4f5; --border: #dfe1e5; --context-bg: #ffffff;
@@ -27,11 +29,21 @@
         * { 
             -webkit-tap-highlight-color: transparent; 
             box-sizing: border-box; 
+            user-select: none; 
+            -webkit-user-select: none; 
+            -ms-user-select: none;
             transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
         }
 
-        input, textarea, .message * { transition: none !important; }
-        input, textarea { user-select: text !important; -webkit-user-select: text !important; }
+        input, textarea, .message * {
+            transition: none !important;
+        }
+
+        input, textarea {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            -ms-user-select: text !important;
+        }
 
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -44,21 +56,45 @@
         .auth-input-group { margin-bottom: 16px; text-align: left; }
         .auth-input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 6px; margin-left: 4px; color: var(--accent); text-transform: uppercase; }
         .auth-input-wrapper { position: relative; display: flex; align-items: center; }
-        .auth-input-wrapper svg, .eye-btn { position: absolute; color: var(--accent); opacity: 0.7; }
-        .auth-input-wrapper svg:first-child { left: 14px; }
-        .eye-btn { right: 14px; cursor: pointer; background: none; border: none; padding: 0; display: flex; align-items: center; }
-        .auth-field { width: 100%; background: var(--auth-input); border: 2px solid transparent; border-radius: 14px; padding: 12px 40px 12px 42px; color: var(--text); font-size: 15px; outline: none; }
+        .auth-input-wrapper svg.input-icon { position: absolute; left: 14px; color: var(--accent); opacity: 0.7; }
+        
+        .auth-field { width: 100%; background: var(--auth-input); border: 2px solid transparent; border-radius: 14px; padding: 12px 42px 12px 42px; color: var(--text); font-size: 15px; outline: none; }
+        .auth-field.no-left-icon { padding-left: 14px; }
         .auth-field:focus { border-color: var(--accent); background: var(--panel); }
 
+        .eye-btn { position: absolute; right: 14px; background: none; border: none; padding: 0; color: var(--accent); opacity: 0.7; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+        .eye-btn:hover { opacity: 1; }
+
         .tab { flex: 1; padding: 10px; cursor: pointer; border-radius: 11px; font-size: 13px; font-weight: 600; text-align: center; }
+
         header { background: var(--panel); height: 56px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); flex-shrink: 0; position: relative; }
         .header-left, .header-right { display: flex; align-items: center; gap: 10px; }
 
+        .search-container { display: none; position: absolute; left: 0; right: 0; top: 0; bottom: 0; background: var(--panel); padding: 0 15px; align-items: center; z-index: 10; }
+        .search-container.active { display: flex; }
+        #search-input { flex: 1; background: var(--input-bg); border: none; color: var(--text); padding: 8px 15px; border-radius: 10px; outline: none; }
+
         #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
 
-        .message { padding: 8px 12px; border-radius: 16px; background: var(--msg-in); align-self: flex-start; max-width: 85%; border: 1px solid var(--border); position: relative; word-wrap: break-word; white-space: pre-wrap; }
+        blockquote { margin: 5px 0; padding: 5px 12px; border-left: 3px solid var(--quote-bar); background: var(--quote-bg); border-radius: 4px; font-style: italic; cursor: pointer; }
+
+        .message { padding: 8px 12px; border-radius: 16px; background: var(--msg-in); align-self: flex-start; max-width: 85%; border: 1px solid var(--border); position: relative; word-wrap: break-word; }
         .message.my { background: var(--msg-out); align-self: flex-end; border: none; }
-        
+        .message.highlight-anim { animation: highlight-pulse 2s ease-out; }
+        @keyframes highlight-pulse { 0% { outline: 2px solid var(--accent); } 100% { outline: 2px solid transparent; } }
+
+        /* Whitespace preservation for messages */
+        .message div, .message p { white-space: pre-wrap; word-break: break-word; margin-top: 0; margin-bottom: 4px; }
+        .message p:last-child { margin-bottom: 0; }
+
+        .reactions-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .reaction-chip { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 10px; font-size: 11px; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; gap: 3px; }
+        .reaction-chip.active { border-color: var(--accent); background: var(--quote-bg); }
+
+        .msg-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: 10px; opacity: 0.6; margin-top: 2px; }
+        .ticks { display: flex; align-items: center; }
+        .ticks.read { color: var(--read); }
+
         .input-area { background: var(--panel); padding: 10px; border-top: 1px solid var(--border); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
         .input-row { display: flex; gap: 10px; align-items: flex-end; }
         #message-input { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: 22px; flex: 1; font-size: 15px; resize: none; outline: none; max-height: 150px; }
@@ -67,20 +103,23 @@
         .icon-btn { background: none; border: none; color: var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px; }
         .hidden { display: none !important; }
 
-        #settings-modal, #info-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-box { background: var(--panel); width: 100%; max-width: 320px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); overflow-y: auto; max-height: 90vh; }
-        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
-        .settings-input { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 8px; margin-top: 5px; outline: none; }
-
-        #context-menu { position: fixed; background: var(--context-bg); border: 1px solid var(--border); border-radius: 20px; z-index: 3000; min-width: 220px; display: none; overflow: hidden; }
-        .context-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 14px; display: flex; align-items: center; gap: 10px; }
-        
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; inset: 0; background-color: #ccc; border-radius: 34px; transition: .4s; }
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .4s; }
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(20px); }
+
+        #settings-modal, #info-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-box { background: var(--panel); width: 100%; max-width: 320px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+
+        #context-menu { position: fixed; background: var(--context-bg); border: 1px solid var(--border); border-radius: 20px; z-index: 3000; min-width: 220px; display: none; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .context-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+        .context-item:last-child { border-bottom: none; }
+
+        .emoji-picker { display: flex; justify-content: space-around; padding: 10px; background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); }
+        .emoji-item { font-size: 20px; cursor: pointer; transition: transform 0.2s; }
     </style>
 </head>
 <body class="dark-theme">
@@ -96,16 +135,42 @@
             <div class="tab" id="tab-reg">Регистрация</div>
         </div>
         <div id="auth-form">
-            <div class="auth-input-group"><label>Логин</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><input type="text" id="auth-user" class="auth-field" placeholder="Никнейм" style="padding-right: 14px;"></div></div>
-            <div class="auth-input-group"><label>Пароль</label><div class="auth-input-wrapper">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                <input type="password" id="auth-pass" class="auth-field" placeholder="Пароль">
-                <button class="eye-btn" onclick="togglePass('auth-pass')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
-            </div></div>
+            <div class="auth-input-group">
+                <label>Логин</label>
+                <div class="auth-input-wrapper">
+                    <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <input type="text" id="auth-user" class="auth-field" placeholder="Ваш оригинальнейший никнейм">
+                </div>
+            </div>
+            <div class="auth-input-group">
+                <label>Пароль</label>
+                <div class="auth-input-wrapper">
+                    <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <input type="password" id="auth-pass" class="auth-field" placeholder="Пароль. Это должно быть просто!">
+                    <button class="eye-btn" onclick="togglePassVisibility('auth-pass', this)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+            </div>
             
             <div id="reg-fields" class="hidden">
-                <div class="auth-input-group"><label>Повтор пароля</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><input type="password" id="auth-pass-confirm" class="auth-field" placeholder="Еще раз" style="padding-right: 14px;"></div></div>
-                <div class="auth-input-group"><label>Секретный код</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3L15.5 7.5z"></path></svg><input type="password" id="auth-secret" class="auth-field" placeholder="Код приглашения" style="padding-right: 14px;"></div></div>
+                <div class="auth-input-group">
+                    <label>Повтор пароля</label>
+                    <div class="auth-input-wrapper">
+                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <input type="password" id="auth-pass-confirm" class="auth-field" placeholder="Опять?!">
+                        <button class="eye-btn" onclick="togglePassVisibility('auth-pass-confirm', this)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="auth-input-group">
+                    <label>Секретный код</label>
+                    <div class="auth-input-wrapper">
+                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                        <input type="text" id="auth-secret" class="auth-field" placeholder="Код для доступа">
+                    </div>
+                </div>
             </div>
 
             <button id="auth-btn" class="btn-main" style="width:100%; height: 48px; margin-top: 10px;">Войти</button>
@@ -120,14 +185,23 @@
         <span style="font-weight:700">GGgram</span>
     </div>
     <div class="header-right">
+        <button class="icon-btn" id="open-search-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
         <span id="user-display" style="font-size:12px; font-weight: 600; opacity: 0.8;"></span>
         <button id="global-logout-btn" class="icon-btn" style="color:var(--error)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
+    <div class="search-container" id="search-bar">
+        <input type="text" id="search-input" placeholder="Поиск по сообщениям...">
+        <button class="icon-btn" id="close-search-btn">✕</button>
     </div>
 </header>
 
 <div id="chat-container"></div>
 
 <div class="input-area">
+    <div id="reply-bar" class="hidden" style="display: flex; justify-content: space-between; padding: 8px; background: var(--quote-bg); border-left: 3px solid var(--accent); margin-bottom: 8px;">
+        <span id="reply-text" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis;"></span>
+        <span id="cancel-reply-btn" style="cursor:pointer">✕</span>
+    </div>
     <div class="input-row">
         <textarea id="message-input" placeholder="Сообщение..." rows="1"></textarea>
         <button id="send-btn" class="btn-main" style="width: 44px; height: 44px; border-radius: 50%; padding:0; display:flex; align-items:center; justify-content:center;">
@@ -138,24 +212,41 @@
 
 <div id="settings-modal">
     <div class="modal-box">
-        <h3>Настройки</h3>
-        <div class="settings-item"><span>Светлая тема</span><label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider"></span></label></div>
+        <h3 style="margin-top: 0;">Настройки</h3>
+        <div class="settings-item">
+            <span>Светлая тема</span>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
         
-        <div style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
-            <p style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">Смена пароля</p>
-            <input type="password" id="old-pass" class="settings-input" placeholder="Старый пароль">
-            <input type="password" id="new-pass" class="settings-input" placeholder="Новый пароль">
-            <input type="password" id="new-pass-confirm" class="settings-input" placeholder="Повтор нового">
-            <button id="change-pass-btn" class="btn-main" style="width:100%; margin-top:10px; font-size: 13px;">Обновить пароль</button>
+        <!-- Change Password Section -->
+        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px; border-bottom: none; margin-top: 10px;">
+            <span style="font-weight: 600; font-size: 13px;">Изменить пароль</span>
+            <div class="auth-input-wrapper">
+                <input type="password" id="settings-old-pass" class="auth-field no-left-icon" placeholder="Старый пароль">
+                <button class="eye-btn" onclick="togglePassVisibility('settings-old-pass', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+            <div class="auth-input-wrapper">
+                <input type="password" id="settings-new-pass" class="auth-field no-left-icon" placeholder="Новый пароль">
+                <button class="eye-btn" onclick="togglePassVisibility('settings-new-pass', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+            <div class="auth-input-wrapper">
+                <input type="password" id="settings-new-pass-confirm" class="auth-field no-left-icon" placeholder="Повторите новый пароль">
+                <button class="eye-btn" onclick="togglePassVisibility('settings-new-pass-confirm', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+            <button id="change-pass-btn" class="btn-main" style="padding: 10px;">Сохранить пароль</button>
+            <p id="change-pass-error" style="color:var(--error); font-size:12px; margin:0; text-align:center; min-height:15px;"></p>
         </div>
 
-        <div class="settings-item" style="border:none; margin-top:10px;">
-            <button id="clear-cache-btn" class="btn-main" style="width:100%; background:var(--error)">Очистить кэш</button>
+        <div class="settings-item" style="border:none; margin-top:5px;">
+            <button id="clear-cache-btn" class="btn-main" style="width:100%; background:var(--error)">Очистить кэш сообщений</button>
         </div>
-        <button id="close-settings-btn" class="btn-main" style="width:100%; margin-top:15px; background:var(--border); color:var(--text)">Закрыть</button>
+        <button id="close-settings-btn" class="btn-main" style="width:100%; margin-top:10px; background:var(--border); color:var(--text)">Закрыть</button>
     </div>
 </div>
-<div id="info-modal"><div class="modal-box"><h3 id="info-title">Инфо</h3><div id="info-content"></div><button onclick="document.getElementById('info-modal').style.display='none'" class="btn-main" style="width:100%">Ок</button></div></div>
+<div id="info-modal"><div class="modal-box"><h3 id="info-title">Информация</h3><div id="info-content" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div><button onclick="document.getElementById('info-modal').style.display='none'" class="btn-main" style="width:100%">Закрыть</button></div></div>
 <div id="context-menu"></div>
 
 <script type="module">
@@ -179,109 +270,248 @@
     let isLoginMode = true;
     const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
     let allMessages = {};
+    let currentReply = null;
+    let editingId = null;
 
-    // --- Utils ---
-    async function hash(str) {
-        const msg = new TextEncoder().encode(str);
-        const buffer = await crypto.subtle.digest('SHA-256', msg);
-        return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    function genSalt() { return Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join(''); }
-
-    window.togglePass = (id) => {
-        const el = document.getElementById(id);
-        el.type = el.type === 'password' ? 'text' : 'password';
+    // --- Theme Logic ---
+    const themeToggle = document.getElementById('theme-toggle');
+    const applyTheme = (theme) => {
+        if (theme === 'light') {
+            document.body.classList.add('light-theme');
+            themeToggle.checked = true;
+        } else {
+            document.body.classList.remove('light-theme');
+            themeToggle.checked = false;
+        }
+    };
+    const savedTheme = localStorage.getItem('theme');
+    const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    if (savedTheme) applyTheme(savedTheme); else if (prefersLight) applyTheme('light');
+    themeToggle.onchange = (e) => {
+        const theme = e.target.checked ? 'light' : 'dark';
+        applyTheme(theme);
+        localStorage.setItem('theme', theme);
     };
 
-    // --- Theme (No changes) ---
-    const themeToggle = document.getElementById('theme-toggle');
-    const applyTheme = (theme) => { theme === 'light' ? document.body.classList.add('light-theme') : document.body.classList.remove('light-theme'); themeToggle.checked = (theme === 'light'); };
-    if (localStorage.getItem('theme')) applyTheme(localStorage.getItem('theme'));
-    themeToggle.onchange = (e) => { const t = e.target.checked ? 'light' : 'dark'; applyTheme(t); localStorage.setItem('theme', t); };
+    marked.setOptions({ breaks: true, gfm: true });
 
-    // --- Auth Logic ---
-    const errorEl = document.getElementById('auth-error');
     const authBtn = document.getElementById('auth-btn');
+    const errorEl = document.getElementById('auth-error');
 
-    document.getElementById('tab-login').onclick = () => { isLoginMode = true; updateUI(); };
-    document.getElementById('tab-reg').onclick = () => { isLoginMode = false; updateUI(); };
-
-    function updateUI() {
-        document.getElementById('tab-login').style.cssText = isLoginMode ? 'background:var(--accent); color:white' : '';
-        document.getElementById('tab-reg').style.cssText = !isLoginMode ? 'background:var(--accent); color:white' : '';
-        document.getElementById('reg-fields').classList.toggle('hidden', isLoginMode);
-        authBtn.innerText = isLoginMode ? "Войти" : "Создать аккаунт";
+    function updateTabUI() {
+        const isLogin = isLoginMode;
+        document.getElementById('tab-login').style.cssText = isLogin ? 'background:var(--accent); color:white' : '';
+        document.getElementById('tab-reg').style.cssText = !isLogin ? 'background:var(--accent); color:white' : '';
+        document.getElementById('reg-fields').classList.toggle('hidden', isLogin);
+        authBtn.innerText = isLogin ? "Войти" : "Создать аккаунт";
         errorEl.innerText = "";
     }
-    updateUI();
+
+    document.getElementById('tab-login').onclick = () => { isLoginMode = true; updateTabUI(); };
+    document.getElementById('tab-reg').onclick = () => { isLoginMode = false; updateTabUI(); };
+    updateTabUI();
+
+    // Глазик для паролей
+    window.togglePassVisibility = (id, btn) => {
+        const input = document.getElementById(id);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.style.opacity = '1';
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+        } else {
+            input.type = 'password';
+            btn.style.opacity = '0.7';
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+        }
+    };
+
+    // Хэширование и проверка секьюрности
+    async function hashPass(p) {
+        const msg = new TextEncoder().encode(p);
+        const hash = await crypto.subtle.digest('SHA-256', msg);
+        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function checkPassSecurity(p) {
+        if (p.length < 6) return "Пароль должен быть от 6 символов";
+        if (!/[A-Za-zА-Яа-я]/.test(p)) return "Пароль должен содержать буквы";
+        if (!/[0-9]/.test(p)) return "Пароль должен содержать цифры";
+        return null;
+    }
 
     authBtn.onclick = async () => {
         const u = document.getElementById('auth-user').value.trim().toLowerCase();
         const p = document.getElementById('auth-pass').value.trim();
-        if(!u || !p) return errorEl.innerText = "Заполните все поля";
-
+        if(!u || !p) return errorEl.innerText = "Заполните ник и пароль";
+        
         const userRef = ref(db, 'users/' + u);
 
         if(isLoginMode) {
-            const snap = await get(userRef);
-            if(snap.exists()) {
-                const data = snap.val();
-                const hp = await hash(p + (data.salt || ""));
-                if(data.password === hp) login(u);
-                else errorEl.innerText = "Неверный пароль";
-            } else errorEl.innerText = "Пользователь не найден";
+            authBtn.disabled = true;
+            authBtn.innerText = "Вход...";
+            try {
+                const snap = await get(userRef);
+                if(snap.exists()) {
+                    const userData = snap.val();
+                    const salt = userData.salt || ''; // фоллбек, если юзер старый и без соли
+                    const hp = await hashPass(p + salt);
+                    if (userData.password === hp) {
+                        login(u);
+                    } else {
+                        errorEl.innerText = "Неверный ник или пароль";
+                    }
+                } else {
+                    errorEl.innerText = "Неверный ник или пароль";
+                }
+            } catch (err) {
+                errorEl.innerText = "Ошибка: " + err.message;
+            }
+            authBtn.disabled = false;
+            authBtn.innerText = "Войти";
         } else {
+            // REGISTRATION MODE (Секретный код)
             const pc = document.getElementById('auth-pass-confirm').value.trim();
             const sc = document.getElementById('auth-secret').value.trim();
-            if(p.length < 6) return errorEl.innerText = "Пароль слишком короткий (мин. 6)";
+
             if(p !== pc) return errorEl.innerText = "Пароли не совпадают";
-            
-            const userSnap = await get(userRef);
-            if(userSnap.exists()) return errorEl.innerText = "Ник занят";
+            const passErr = checkPassSecurity(p);
+            if(passErr) return errorEl.innerText = passErr;
+            if(!sc) return errorEl.innerText = "Введите секретный код";
 
-            const codesSnap = await get(ref(db, 'sc'));
-            let realName = null;
-            let codeKey = null;
-            const scHash = await hash(sc);
+            authBtn.disabled = true;
+            authBtn.innerText = "Проверка кода...";
 
-            if(codesSnap.exists()) {
-                Object.entries(codesSnap.val()).forEach(([name, h]) => {
-                    if(h === scHash) { realName = name; codeKey = name; }
+            try {
+                const snap = await get(userRef);
+                if(snap.exists()) {
+                    authBtn.disabled = false;
+                    authBtn.innerText = "Создать аккаунт";
+                    return errorEl.innerText = "Ник занят";
+                }
+
+                // Ищем хэш кода в папке sc
+                const scHash = await hashPass(sc);
+                const scSnap = await get(ref(db, 'sc'));
+                let foundRealName = null;
+
+                if (scSnap.exists()) {
+                    const scData = scSnap.val();
+                    for (const [name, hash] of Object.entries(scData)) {
+                        if (hash === scHash) {
+                            foundRealName = name;
+                            break;
+                        }
+                    }
+                }
+
+                if (!foundRealName) {
+                    authBtn.disabled = false;
+                    authBtn.innerText = "Создать аккаунт";
+                    return errorEl.innerText = "Неверный секретный код";
+                }
+
+                // Регистрация: генерируем соль и сохраняем
+                const salt = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                const hp = await hashPass(p + salt);
+
+                await set(userRef, { 
+                    password: hp, 
+                    salt: salt,
+                    realName: foundRealName
                 });
+                
+                // Удаляем использованный код
+                await remove(ref(db, 'sc/' + foundRealName));
+
+                login(u);
+            } catch (err) {
+                authBtn.disabled = false;
+                authBtn.innerText = "Создать аккаунт";
+                errorEl.innerText = "Ошибка: " + err.message;
             }
-
-            if(!realName) return errorEl.innerText = "Неверный секретный код";
-
-            const salt = genSalt();
-            const hp = await hash(p + salt);
-            await set(userRef, { password: hp, salt: salt, realName: realName });
-            await remove(ref(db, 'sc/' + codeKey));
-            login(u);
         }
     };
 
-    async function login(u) {
-        const snap = await get(ref(db, 'users/' + u));
-        if(!snap.exists()) { logout(); return; }
-        
+    function login(u) {
         currentUser = u;
         localStorage.setItem('chat_user', u);
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('user-display').innerText = "@" + u;
         initChat();
     }
-    if(currentUser) login(currentUser);
 
-    function logout() { localStorage.clear(); location.reload(); }
-    document.getElementById('global-logout-btn').onclick = logout;
+    // Проверка сессии при загрузке страницы
+    if(currentUser) {
+        authBtn.disabled = true;
+        authBtn.innerText = "Загрузка...";
+        get(ref(db, 'users/' + currentUser)).then(snap => {
+            if(snap.exists()) {
+                login(currentUser);
+            } else {
+                localStorage.removeItem('chat_user');
+                currentUser = null;
+                authBtn.disabled = false;
+                authBtn.innerText = "Войти";
+            }
+        }).catch(() => {
+            login(currentUser); // fallback при ошибке сети
+        });
+    }
 
-    // --- Chat & Messages ---
+    // Смена пароля в настройках
+    document.getElementById('change-pass-btn').onclick = async () => {
+        const oldP = document.getElementById('settings-old-pass').value.trim();
+        const newP = document.getElementById('settings-new-pass').value.trim();
+        const newPConf = document.getElementById('settings-new-pass-confirm').value.trim();
+        const errEl = document.getElementById('change-pass-error');
+        errEl.style.color = "var(--error)";
+
+        if (!oldP || !newP || !newPConf) return errEl.innerText = "Заполните все поля";
+        if (newP !== newPConf) return errEl.innerText = "Новые пароли не совпадают";
+
+        const passErr = checkPassSecurity(newP);
+        if(passErr) return errEl.innerText = passErr;
+
+        const userRef = ref(db, 'users/' + currentUser);
+        try {
+            const snap = await get(userRef);
+            if (snap.exists()) {
+                const userData = snap.val();
+                const oldSalt = userData.salt || '';
+                const oldHash = await hashPass(oldP + oldSalt);
+                
+                if (userData.password !== oldHash) {
+                    return errEl.innerText = "Неверный старый пароль";
+                }
+
+                const newSalt = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                const newHash = await hashPass(newP + newSalt);
+                
+                await update(userRef, { password: newHash, salt: newSalt });
+
+                errEl.style.color = "var(--read)";
+                errEl.innerText = "Пароль успешно изменен";
+                document.getElementById('settings-old-pass').value = '';
+                document.getElementById('settings-new-pass').value = '';
+                document.getElementById('settings-new-pass-confirm').value = '';
+            }
+        } catch (e) {
+            errEl.innerText = "Ошибка смены пароля";
+        }
+    };
+
+    // --- Chat Logic ---
     function initChat() {
         const chatRef = ref(db, 'chat_messages');
         onChildAdded(chatRef, (snap) => {
             allMessages[snap.key] = snap.val();
             renderMsg(snap.key, snap.val());
+            markAsRead(snap.key, snap.val());
+        });
+        onChildChanged(chatRef, (snap) => {
+            allMessages[snap.key] = snap.val();
+            const el = document.getElementById("msg-" + snap.key);
+            if(el) el.innerHTML = getMsgInner(snap.key, snap.val());
         });
         onChildRemoved(chatRef, (snap) => {
             delete allMessages[snap.key];
@@ -289,48 +519,153 @@
         });
     }
 
+    async function markAsRead(id, data) {
+        if (data.username !== currentUser && (!data.readBy || !data.readBy[currentUser])) {
+            await set(ref(db, `chat_messages/${id}/readBy/${currentUser}`), Date.now());
+        }
+    }
+
     function renderMsg(id, data) {
+        const hiddenMsgs = JSON.parse(localStorage.getItem('hidden_msgs') || '[]');
+        if (hiddenMsgs.includes(id)) return;
         const div = document.createElement('div');
         div.className = `message ${data.username === currentUser ? 'my' : ''}`;
         div.id = "msg-" + id;
-        const time = new Date(data.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        div.innerHTML = `<b style="color:var(--accent); font-size:12px">${data.username}</b><div style="margin-top:4px">${marked.parse(data.text)}</div><div style="font-size:9px; opacity:0.5; text-align:right">${time}</div>`;
+        div.innerHTML = getMsgInner(id, data);
+        div.oncontextmenu = (e) => { e.preventDefault(); showContext(e, id, data); };
+        let pt; div.ontouchstart = (e) => { pt = setTimeout(() => showContext(e.touches[0], id, data), 500); };
+        div.ontouchend = () => clearTimeout(pt);
         document.getElementById('chat-container').appendChild(div);
         document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
     }
 
+    function getMsgInner(id, data) {
+        const quote = data.replyTo ? `<blockquote onclick="window.scrollToMsg('${data.replyTo.id}')"><b>${data.replyTo.user}</b>: ${data.replyTo.text.slice(0,30)}...</blockquote>` : '';
+        const md = marked.parse(data.text || '');
+        const time = new Date(data.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const edited = data.edited ? `<span style="opacity:0.4; font-size:9px">изм.</span>` : '';
+        let ticks = '';
+        if (data.username === currentUser) {
+            const isRead = data.readBy && Object.keys(data.readBy).some(u => u !== currentUser);
+            ticks = `<div class="ticks ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</div>`;
+        }
+        let reactsHtml = '<div class="reactions-bar">';
+        if(data.reactions) {
+            Object.entries(data.reactions).forEach(([emoji, users]) => {
+                const count = Object.keys(users).length;
+                if(count > 0) reactsHtml += `<div class="reaction-chip ${users[currentUser]?'active':''}" onclick="event.stopPropagation(); window.toggleReaction('${id}', '${emoji}')">${emoji} ${count}</div>`;
+            });
+        }
+        reactsHtml += '</div>';
+        return `${quote}<b style="color:var(--accent); font-size:13px">${data.username}</b><div>${md}</div>${reactsHtml}<div class="msg-meta">${edited} ${time} ${ticks}</div>`;
+    }
+
+    window.scrollToMsg = (id) => {
+        const el = document.getElementById('msg-' + id);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight-anim');
+            setTimeout(() => el.classList.remove('highlight-anim'), 2000);
+        }
+    };
+
+    function showContext(e, id, data) {
+        const menu = document.getElementById('context-menu');
+        menu.style.display = 'block';
+        menu.style.left = Math.min(e.clientX, window.innerWidth - 230) + 'px';
+        menu.style.top = Math.min(e.clientY, window.innerHeight - 250) + 'px';
+        const isMy = data.username === currentUser;
+        let ems = `<div class="emoji-picker">` + EMOJIS.map(em => `<span class="emoji-item" onclick="window.toggleReaction('${id}','${em}')">${em}</span>`).join('') + `</div>`;
+        menu.innerHTML = `${ems}<div class="context-item" id="ctx-copy">📋 Копировать</div><div class="context-item" id="ctx-reply">↩️ Ответить</div>${isMy ? `<div class="context-item" id="ctx-edit">✏️ Изменить</div><div class="context-item" id="ctx-readers">👀 Кто прочитал</div>` : ''}<div class="context-item" style="color:var(--error)" id="ctx-hide">🗑️ Скрыть</div>${isMy ? `<div class="context-item" style="color:var(--error)" id="ctx-del">🗑️ Удалить у всех</div>` : ''}`;
+        document.getElementById('ctx-copy').onclick = () => { window.copyMsg(data.text); };
+        document.getElementById('ctx-reply').onclick = () => { window.replyTo(id, data.username, data.text); };
+        if (isMy) {
+            document.getElementById('ctx-edit').onclick = () => { window.editMsg(id); };
+            document.getElementById('ctx-readers').onclick = () => { window.showReaders(id); };
+            document.getElementById('ctx-del').onclick = () => { window.delMsg(id); };
+        }
+        document.getElementById('ctx-hide').onclick = () => { window.delLocal(id); };
+    }
+
+    window.showReaders = (id) => {
+        const msg = allMessages[id];
+        const modal = document.getElementById('info-modal');
+        const content = document.getElementById('info-content');
+        document.getElementById('info-title').innerText = "Просмотрено:";
+        const readers = msg.readBy ? Object.keys(msg.readBy).filter(u => u !== currentUser) : [];
+        content.innerHTML = readers.length ? readers.map(u => `<div style="padding:5px 0">@${u}</div>`).join('') : "Никто еще не прочитал";
+        modal.style.display = 'flex';
+        document.getElementById('context-menu').style.display = 'none';
+    };
+
+    window.toggleReaction = async (msgId, emoji) => {
+        const reactRef = ref(db, `chat_messages/${msgId}/reactions/${emoji}/${currentUser}`);
+        const snap = await get(reactRef);
+        snap.exists() ? await remove(reactRef) : await set(reactRef, true);
+        document.getElementById('context-menu').style.display = 'none';
+    };
+
+    window.copyMsg = (t) => { navigator.clipboard.writeText(t); document.getElementById('context-menu').style.display='none'; };
+    window.delMsg = (id) => { remove(ref(db, 'chat_messages/' + id)); document.getElementById('context-menu').style.display='none'; };
+    window.delLocal = (id) => {
+        const h = JSON.parse(localStorage.getItem('hidden_msgs') || '[]');
+        h.push(id); localStorage.setItem('hidden_msgs', JSON.stringify(h));
+        document.getElementById("msg-" + id)?.remove();
+        document.getElementById('context-menu').style.display='none';
+    };
+
+    window.replyTo = (id, u, t) => {
+        editingId = null; currentReply = { id, user: u, text: (t || '').slice(0, 30) };
+        document.getElementById('reply-bar').classList.remove('hidden');
+        document.getElementById('reply-text').innerText = "Ответ на: " + u;
+        document.getElementById('context-menu').style.display='none';
+        document.getElementById('message-input').focus();
+    };
+
+    window.editMsg = (id) => {
+        currentReply = null; editingId = id;
+        document.getElementById('reply-bar').classList.remove('hidden');
+        document.getElementById('reply-text').innerText = "Редактирование...";
+        document.getElementById('message-input').value = allMessages[id]?.text || "";
+        document.getElementById('context-menu').style.display='none';
+        document.getElementById('message-input').focus();
+    };
+
+    window.cancelInputState = () => { currentReply = null; editingId = null; document.getElementById('message-input').value = ""; document.getElementById('reply-bar').classList.add('hidden'); };
+    document.getElementById('cancel-reply-btn').onclick = window.cancelInputState;
+
     document.getElementById('send-btn').onclick = async () => {
         const inp = document.getElementById('message-input');
         const v = inp.value.trim(); if(!v) return;
-        await push(ref(db, 'chat_messages'), { username: currentUser, text: v, time: Date.now() });
-        inp.value = "";
+        if (editingId) { await update(ref(db, 'chat_messages/' + editingId), { text: v, edited: true }); }
+        else { await push(ref(db, 'chat_messages'), { username: currentUser, text: v, time: Date.now(), replyTo: currentReply }); }
+        window.cancelInputState();
     };
 
-    // --- Password Change Logic ---
-    document.getElementById('change-pass-btn').onclick = async () => {
-        const oldP = document.getElementById('old-pass').value;
-        const newP = document.getElementById('new-pass').value;
-        const newPC = document.getElementById('new-pass-confirm').value;
+    const searchInput = document.getElementById('search-input');
+    document.getElementById('open-search-btn').onclick = () => { document.getElementById('search-bar').classList.add('active'); searchInput.focus(); };
+    document.getElementById('close-search-btn').onclick = () => { document.getElementById('search-bar').classList.remove('active'); searchInput.value = ''; filterMessages(''); };
+    searchInput.oninput = (e) => filterMessages(e.target.value.toLowerCase());
 
-        if(newP.length < 6) return alert("Новый пароль слишком короткий");
-        if(newP !== newPC) return alert("Пароли не совпадают");
-
-        const userRef = ref(db, 'users/' + currentUser);
-        const snap = await get(userRef);
-        const data = snap.val();
-        
-        if(await hash(oldP + data.salt) !== data.password) return alert("Старый пароль неверен");
-
-        const newSalt = genSalt();
-        const newHP = await hash(newP + newSalt);
-        await update(userRef, { password: newHP, salt: newSalt });
-        alert("Пароль успешно изменен!");
-        document.getElementById('settings-modal').style.display = 'none';
-    };
+    function filterMessages(q) {
+        document.querySelectorAll('.message').forEach(el => {
+            const id = el.id.replace('msg-', '');
+            const m = allMessages[id];
+            if (!m) return;
+            const match = (m.text || "").toLowerCase().includes(q) || (m.username || "").toLowerCase().includes(q);
+            el.classList.toggle('hidden', !match);
+        });
+    }
 
     document.getElementById('open-settings-btn').onclick = () => document.getElementById('settings-modal').style.display = 'flex';
     document.getElementById('close-settings-btn').onclick = () => document.getElementById('settings-modal').style.display = 'none';
     document.getElementById('clear-cache-btn').onclick = () => { localStorage.removeItem('hidden_msgs'); location.reload(); };
+    document.getElementById('global-logout-btn').onclick = () => { localStorage.clear(); location.reload(); };
+
+    window.onclick = (e) => {
+        if(e.target.id === 'settings-modal' || e.target.id === 'info-modal') e.target.style.display = 'none';
+        if(!e.target.closest('#context-menu')) document.getElementById('context-menu').style.display = 'none';
+    };
 </script>
 </body>
 </html>

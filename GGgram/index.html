@@ -56,9 +56,14 @@
         .auth-input-group { margin-bottom: 16px; text-align: left; }
         .auth-input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 6px; margin-left: 4px; color: var(--accent); text-transform: uppercase; }
         .auth-input-wrapper { position: relative; display: flex; align-items: center; }
-        .auth-input-wrapper svg { position: absolute; left: 14px; color: var(--accent); opacity: 0.7; }
-        .auth-field { width: 100%; background: var(--auth-input); border: 2px solid transparent; border-radius: 14px; padding: 12px 14px 12px 42px; color: var(--text); font-size: 15px; outline: none; }
+        .auth-input-wrapper svg.input-icon { position: absolute; left: 14px; color: var(--accent); opacity: 0.7; }
+        
+        .auth-field { width: 100%; background: var(--auth-input); border: 2px solid transparent; border-radius: 14px; padding: 12px 42px 12px 42px; color: var(--text); font-size: 15px; outline: none; }
+        .auth-field.no-left-icon { padding-left: 14px; }
         .auth-field:focus { border-color: var(--accent); background: var(--panel); }
+
+        .eye-btn { position: absolute; right: 14px; background: none; border: none; padding: 0; color: var(--accent); opacity: 0.7; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+        .eye-btn:hover { opacity: 1; }
 
         .tab { flex: 1; padding: 10px; cursor: pointer; border-radius: 11px; font-size: 13px; font-weight: 600; text-align: center; }
 
@@ -77,6 +82,10 @@
         .message.my { background: var(--msg-out); align-self: flex-end; border: none; }
         .message.highlight-anim { animation: highlight-pulse 2s ease-out; }
         @keyframes highlight-pulse { 0% { outline: 2px solid var(--accent); } 100% { outline: 2px solid transparent; } }
+
+        /* Whitespace preservation for messages */
+        .message div, .message p { white-space: pre-wrap; word-break: break-word; margin-top: 0; margin-bottom: 4px; }
+        .message p:last-child { margin-bottom: 0; }
 
         .reactions-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
         .reaction-chip { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 10px; font-size: 11px; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; gap: 3px; }
@@ -102,7 +111,7 @@
         input:checked + .slider:before { transform: translateX(20px); }
 
         #settings-modal, #info-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-box { background: var(--panel); width: 100%; max-width: 320px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .modal-box { background: var(--panel); width: 100%; max-width: 320px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
         .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
 
         #context-menu { position: fixed; background: var(--context-bg); border: 1px solid var(--border); border-radius: 20px; z-index: 3000; min-width: 220px; display: none; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -126,16 +135,44 @@
             <div class="tab" id="tab-reg">Регистрация</div>
         </div>
         <div id="auth-form">
-            <div class="auth-input-group"><label>Логин</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><input type="text" id="auth-user" class="auth-field" placeholder="Ваш оригинальнейший никнейм"></div></div>
-            <div class="auth-input-group"><label>Пароль</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><input type="password" id="auth-pass" class="auth-field" placeholder="Пароль. Это должно быть просто!"></div></div>
+            <div class="auth-input-group">
+                <label>Логин</label>
+                <div class="auth-input-wrapper">
+                    <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <input type="text" id="auth-user" class="auth-field" placeholder="Ваш оригинальнейший никнейм">
+                </div>
+            </div>
+            <div class="auth-input-group">
+                <label>Пароль</label>
+                <div class="auth-input-wrapper">
+                    <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <input type="password" id="auth-pass" class="auth-field" placeholder="Пароль. Это должно быть просто!">
+                    <button class="eye-btn" onclick="togglePassVisibility('auth-pass', this)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+            </div>
             
             <div id="reg-fields" class="hidden">
-                <div class="auth-input-group"><label>Повтор пароля</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><input type="password" id="auth-pass-confirm" class="auth-field" placeholder="Опять?!"></div></div>
-                <div class="auth-input-group"><label>Номер телефона</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><input type="tel" id="auth-phone" class="auth-field" placeholder="8 800 555 35 35"></div></div>
-                <div id="sms-group" class="auth-input-group hidden"><label>Код из СМС</label><div class="auth-input-wrapper"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg><input type="text" id="auth-sms" class="auth-field" placeholder="123456"></div></div>
+                <div class="auth-input-group">
+                    <label>Повтор пароля</label>
+                    <div class="auth-input-wrapper">
+                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <input type="password" id="auth-pass-confirm" class="auth-field" placeholder="Опять?!">
+                        <button class="eye-btn" onclick="togglePassVisibility('auth-pass-confirm', this)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="auth-input-group">
+                    <label>Секретный код</label>
+                    <div class="auth-input-wrapper">
+                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                        <input type="text" id="auth-secret" class="auth-field" placeholder="Код для доступа">
+                    </div>
+                </div>
             </div>
 
-            <div id="recaptcha-container"></div>
             <button id="auth-btn" class="btn-main" style="width:100%; height: 48px; margin-top: 10px;">Войти</button>
             <p id="auth-error" style="color:var(--error); font-size:12px; margin-top:10px; min-height: 15px;"></p>
         </div>
@@ -175,7 +212,7 @@
 
 <div id="settings-modal">
     <div class="modal-box">
-        <h3>Настройки</h3>
+        <h3 style="margin-top: 0;">Настройки</h3>
         <div class="settings-item">
             <span>Светлая тема</span>
             <label class="switch">
@@ -183,10 +220,30 @@
                 <span class="slider"></span>
             </label>
         </div>
-        <div class="settings-item" style="border:none; margin-top:10px;">
+        
+        <!-- Change Password Section -->
+        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px; border-bottom: none; margin-top: 10px;">
+            <span style="font-weight: 600; font-size: 13px;">Изменить пароль</span>
+            <div class="auth-input-wrapper">
+                <input type="password" id="settings-old-pass" class="auth-field no-left-icon" placeholder="Старый пароль">
+                <button class="eye-btn" onclick="togglePassVisibility('settings-old-pass', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+            <div class="auth-input-wrapper">
+                <input type="password" id="settings-new-pass" class="auth-field no-left-icon" placeholder="Новый пароль">
+                <button class="eye-btn" onclick="togglePassVisibility('settings-new-pass', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+            <div class="auth-input-wrapper">
+                <input type="password" id="settings-new-pass-confirm" class="auth-field no-left-icon" placeholder="Повторите новый пароль">
+                <button class="eye-btn" onclick="togglePassVisibility('settings-new-pass-confirm', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+            <button id="change-pass-btn" class="btn-main" style="padding: 10px;">Сохранить пароль</button>
+            <p id="change-pass-error" style="color:var(--error); font-size:12px; margin:0; text-align:center; min-height:15px;"></p>
+        </div>
+
+        <div class="settings-item" style="border:none; margin-top:5px;">
             <button id="clear-cache-btn" class="btn-main" style="width:100%; background:var(--error)">Очистить кэш сообщений</button>
         </div>
-        <button id="close-settings-btn" class="btn-main" style="width:100%; margin-top:15px; background:var(--border); color:var(--text)">Закрыть</button>
+        <button id="close-settings-btn" class="btn-main" style="width:100%; margin-top:10px; background:var(--border); color:var(--text)">Закрыть</button>
     </div>
 </div>
 <div id="info-modal"><div class="modal-box"><h3 id="info-title">Информация</h3><div id="info-content" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div><button onclick="document.getElementById('info-modal').style.display='none'" class="btn-main" style="width:100%">Закрыть</button></div></div>
@@ -195,7 +252,6 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded, onChildChanged, onChildRemoved, get, set, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-    import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC0VcGrjDffZ3FCD7x9KSJ79ujeLFTbC-o",
@@ -209,23 +265,15 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const auth = getAuth(app);
-    auth.languageCode = 'ru';
 
     let currentUser = localStorage.getItem('chat_user');
     let isLoginMode = true;
-    let confirmationResult = null;
     const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
     let allMessages = {};
     let currentReply = null;
     let editingId = null;
 
-    // --- Recaptcha ---
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible'
-    });
-
-    // --- Theme Logic (No changes) ---
+    // --- Theme Logic ---
     const themeToggle = document.getElementById('theme-toggle');
     const applyTheme = (theme) => {
         if (theme === 'light') {
@@ -257,19 +305,38 @@
         document.getElementById('reg-fields').classList.toggle('hidden', isLogin);
         authBtn.innerText = isLogin ? "Войти" : "Создать аккаунт";
         errorEl.innerText = "";
-        // Reset SMS if switched
-        document.getElementById('sms-group').classList.add('hidden');
-        confirmationResult = null;
     }
 
     document.getElementById('tab-login').onclick = () => { isLoginMode = true; updateTabUI(); };
     document.getElementById('tab-reg').onclick = () => { isLoginMode = false; updateTabUI(); };
     updateTabUI();
 
+    // Глазик для паролей
+    window.togglePassVisibility = (id, btn) => {
+        const input = document.getElementById(id);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.style.opacity = '1';
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+        } else {
+            input.type = 'password';
+            btn.style.opacity = '0.7';
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+        }
+    };
+
+    // Хэширование и проверка секьюрности
     async function hashPass(p) {
         const msg = new TextEncoder().encode(p);
         const hash = await crypto.subtle.digest('SHA-256', msg);
         return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function checkPassSecurity(p) {
+        if (p.length < 6) return "Пароль должен быть от 6 символов";
+        if (!/[A-Za-zА-Яа-я]/.test(p)) return "Пароль должен содержать буквы";
+        if (!/[0-9]/.test(p)) return "Пароль должен содержать цифры";
+        return null;
     }
 
     authBtn.onclick = async () => {
@@ -278,57 +345,89 @@
         if(!u || !p) return errorEl.innerText = "Заполните ник и пароль";
         
         const userRef = ref(db, 'users/' + u);
-        const hp = await hashPass(p);
 
         if(isLoginMode) {
-            const snap = await get(userRef);
-            if(snap.exists() && snap.val().password === hp) login(u);
-            else errorEl.innerText = "Неверный ник или пароль";
-        } else {
-            // REGISTRATION MODE
-            const pc = document.getElementById('auth-pass-confirm').value.trim();
-            const phone = document.getElementById('auth-phone').value.trim();
-            const smsCode = document.getElementById('auth-sms').value.trim();
-
-            const snap = await get(userRef);
-            if(snap.exists()) return errorEl.innerText = "Ник занят";
-            if(p !== pc) return errorEl.innerText = "Пароли не совпадают";
-            if(!phone.startsWith('+')) return errorEl.innerText = "Номер в формате +7...";
-
-            // Если СМС еще не отправлено
-            if(!confirmationResult) {
-                try {
-                    authBtn.disabled = true;
-                    authBtn.innerText = "Отправка СМС...";
-                    confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-                    document.getElementById('sms-group').classList.remove('hidden');
-                    authBtn.disabled = false;
-                    authBtn.innerText = "Подтвердить код";
-                    errorEl.innerText = "СМС отправлено";
-                } catch (err) {
-                    authBtn.disabled = false;
-                    authBtn.innerText = "Создать аккаунт";
-                    errorEl.innerText = "Ошибка СМС: " + err.message;
+            authBtn.disabled = true;
+            authBtn.innerText = "Вход...";
+            try {
+                const snap = await get(userRef);
+                if(snap.exists()) {
+                    const userData = snap.val();
+                    const salt = userData.salt || ''; // фоллбек, если юзер старый и без соли
+                    const hp = await hashPass(p + salt);
+                    if (userData.password === hp) {
+                        login(u);
+                    } else {
+                        errorEl.innerText = "Неверный ник или пароль";
+                    }
+                } else {
+                    errorEl.innerText = "Неверный ник или пароль";
                 }
-                return;
+            } catch (err) {
+                errorEl.innerText = "Ошибка: " + err.message;
             }
+            authBtn.disabled = false;
+            authBtn.innerText = "Войти";
+        } else {
+            // REGISTRATION MODE (Секретный код)
+            const pc = document.getElementById('auth-pass-confirm').value.trim();
+            const sc = document.getElementById('auth-secret').value.trim();
 
-            // Если СМС отправлено и вводится код
-            if(!smsCode) return errorEl.innerText = "Введите код из СМС";
+            if(p !== pc) return errorEl.innerText = "Пароли не совпадают";
+            const passErr = checkPassSecurity(p);
+            if(passErr) return errorEl.innerText = passErr;
+            if(!sc) return errorEl.innerText = "Введите секретный код";
+
+            authBtn.disabled = true;
+            authBtn.innerText = "Проверка кода...";
 
             try {
-                authBtn.disabled = true;
-                const result = await confirmationResult.confirm(smsCode);
-                // Если телефон подтвержден в Firebase, создаем юзера в RTDB
+                const snap = await get(userRef);
+                if(snap.exists()) {
+                    authBtn.disabled = false;
+                    authBtn.innerText = "Создать аккаунт";
+                    return errorEl.innerText = "Ник занят";
+                }
+
+                // Ищем хэш кода в папке sc
+                const scHash = await hashPass(sc);
+                const scSnap = await get(ref(db, 'sc'));
+                let foundRealName = null;
+
+                if (scSnap.exists()) {
+                    const scData = scSnap.val();
+                    for (const [name, hash] of Object.entries(scData)) {
+                        if (hash === scHash) {
+                            foundRealName = name;
+                            break;
+                        }
+                    }
+                }
+
+                if (!foundRealName) {
+                    authBtn.disabled = false;
+                    authBtn.innerText = "Создать аккаунт";
+                    return errorEl.innerText = "Неверный секретный код";
+                }
+
+                // Регистрация: генерируем соль и сохраняем
+                const salt = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                const hp = await hashPass(p + salt);
+
                 await set(userRef, { 
                     password: hp, 
-                    phone: phone, 
-                    uid: result.user.uid 
+                    salt: salt,
+                    realName: foundRealName
                 });
+                
+                // Удаляем использованный код
+                await remove(ref(db, 'sc/' + foundRealName));
+
                 login(u);
             } catch (err) {
                 authBtn.disabled = false;
-                errorEl.innerText = "Неверный код СМС";
+                authBtn.innerText = "Создать аккаунт";
+                errorEl.innerText = "Ошибка: " + err.message;
             }
         }
     };
@@ -340,9 +439,68 @@
         document.getElementById('user-display').innerText = "@" + u;
         initChat();
     }
-    if(currentUser) login(currentUser);
 
-    // --- Chat Logic (No changes below) ---
+    // Проверка сессии при загрузке страницы
+    if(currentUser) {
+        authBtn.disabled = true;
+        authBtn.innerText = "Загрузка...";
+        get(ref(db, 'users/' + currentUser)).then(snap => {
+            if(snap.exists()) {
+                login(currentUser);
+            } else {
+                localStorage.removeItem('chat_user');
+                currentUser = null;
+                authBtn.disabled = false;
+                authBtn.innerText = "Войти";
+            }
+        }).catch(() => {
+            login(currentUser); // fallback при ошибке сети
+        });
+    }
+
+    // Смена пароля в настройках
+    document.getElementById('change-pass-btn').onclick = async () => {
+        const oldP = document.getElementById('settings-old-pass').value.trim();
+        const newP = document.getElementById('settings-new-pass').value.trim();
+        const newPConf = document.getElementById('settings-new-pass-confirm').value.trim();
+        const errEl = document.getElementById('change-pass-error');
+        errEl.style.color = "var(--error)";
+
+        if (!oldP || !newP || !newPConf) return errEl.innerText = "Заполните все поля";
+        if (newP !== newPConf) return errEl.innerText = "Новые пароли не совпадают";
+
+        const passErr = checkPassSecurity(newP);
+        if(passErr) return errEl.innerText = passErr;
+
+        const userRef = ref(db, 'users/' + currentUser);
+        try {
+            const snap = await get(userRef);
+            if (snap.exists()) {
+                const userData = snap.val();
+                const oldSalt = userData.salt || '';
+                const oldHash = await hashPass(oldP + oldSalt);
+                
+                if (userData.password !== oldHash) {
+                    return errEl.innerText = "Неверный старый пароль";
+                }
+
+                const newSalt = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                const newHash = await hashPass(newP + newSalt);
+                
+                await update(userRef, { password: newHash, salt: newSalt });
+
+                errEl.style.color = "var(--read)";
+                errEl.innerText = "Пароль успешно изменен";
+                document.getElementById('settings-old-pass').value = '';
+                document.getElementById('settings-new-pass').value = '';
+                document.getElementById('settings-new-pass-confirm').value = '';
+            }
+        } catch (e) {
+            errEl.innerText = "Ошибка смены пароля";
+        }
+    };
+
+    // --- Chat Logic ---
     function initChat() {
         const chatRef = ref(db, 'chat_messages');
         onChildAdded(chatRef, (snap) => {

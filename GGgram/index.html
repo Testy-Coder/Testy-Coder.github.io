@@ -57,7 +57,7 @@
         .auth-input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 6px; margin-left: 4px; color: var(--accent); text-transform: uppercase; }
         .auth-input-wrapper { position: relative; display: flex; align-items: center; }
         .auth-input-wrapper svg.input-icon { position: absolute; left: 14px; color: var(--accent); opacity: 0.7; }
-        
+
         .auth-field { width: 100%; background: var(--auth-input); border: 2px solid transparent; border-radius: 14px; padding: 12px 42px 12px 42px; color: var(--text); font-size: 15px; outline: none; }
         .auth-field.no-left-icon { padding-left: 14px; }
         .auth-field:focus { border-color: var(--accent); background: var(--panel); }
@@ -78,20 +78,20 @@
 
         blockquote { margin: 5px 0; padding: 5px 12px; border-left: 3px solid var(--quote-bar); background: var(--quote-bg); border-radius: 4px; font-style: italic; cursor: pointer; }
 
-        .message { padding: 8px 12px; border-radius: 16px; background: var(--msg-in); align-self: flex-start; max-width: 85%; border: 1px solid var(--border); position: relative; word-wrap: break-word; }
+        .message { padding: 6px 12px; border-radius: 16px; background: var(--msg-in); align-self: flex-start; max-width: 85%; border: 1px solid var(--border); position: relative; word-wrap: break-word; }
         .message.my { background: var(--msg-out); align-self: flex-end; border: none; }
         .message.highlight-anim { animation: highlight-pulse 2s ease-out; }
         @keyframes highlight-pulse { 0% { outline: 2px solid var(--accent); } 100% { outline: 2px solid transparent; } }
 
-        /* Whitespace preservation for messages */
-        .message div, .message p { white-space: pre-wrap; word-break: break-word; margin-top: 0; margin-bottom: 4px; }
+        /* Whitespace preservation for messages - Reduced gaps */
+        .message div, .message p { white-space: pre-wrap; word-break: break-word; margin-top: 0; margin-bottom: 2px; }
         .message p:last-child { margin-bottom: 0; }
 
         .reactions-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
         .reaction-chip { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 10px; font-size: 11px; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; gap: 3px; }
         .reaction-chip.active { border-color: var(--accent); background: var(--quote-bg); }
 
-        .msg-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: 10px; opacity: 0.6; margin-top: 2px; }
+        .msg-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: 10px; opacity: 0.6; margin-top: 2px; line-height: 1; }
         .ticks { display: flex; align-items: center; }
         .ticks.read { color: var(--read); }
 
@@ -152,7 +152,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <div id="reg-fields" class="hidden">
                 <div class="auth-input-group">
                     <label>Повтор пароля</label>
@@ -220,7 +220,7 @@
                 <span class="slider"></span>
             </label>
         </div>
-        
+
         <!-- Change Password Section -->
         <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px; border-bottom: none; margin-top: 10px;">
             <span style="font-weight: 600; font-size: 13px;">Изменить пароль</span>
@@ -311,7 +311,6 @@
     document.getElementById('tab-reg').onclick = () => { isLoginMode = false; updateTabUI(); };
     updateTabUI();
 
-    // Глазик для паролей
     window.togglePassVisibility = (id, btn) => {
         const input = document.getElementById(id);
         if (input.type === 'password') {
@@ -325,7 +324,6 @@
         }
     };
 
-    // Хэширование и проверка секьюрности
     async function hashPass(p) {
         const msg = new TextEncoder().encode(p);
         const hash = await crypto.subtle.digest('SHA-256', msg);
@@ -343,7 +341,7 @@
         const u = document.getElementById('auth-user').value.trim().toLowerCase();
         const p = document.getElementById('auth-pass').value.trim();
         if(!u || !p) return errorEl.innerText = "Заполните ник и пароль";
-        
+
         const userRef = ref(db, 'users/' + u);
 
         if(isLoginMode) {
@@ -353,7 +351,7 @@
                 const snap = await get(userRef);
                 if(snap.exists()) {
                     const userData = snap.val();
-                    const salt = userData.salt || ''; // фоллбек, если юзер старый и без соли
+                    const salt = userData.salt || ''; 
                     const hp = await hashPass(p + salt);
                     if (userData.password === hp) {
                         login(u);
@@ -369,7 +367,6 @@
             authBtn.disabled = false;
             authBtn.innerText = "Войти";
         } else {
-            // REGISTRATION MODE (Секретный код)
             const pc = document.getElementById('auth-pass-confirm').value.trim();
             const sc = document.getElementById('auth-secret').value.trim();
 
@@ -389,7 +386,6 @@
                     return errorEl.innerText = "Ник занят";
                 }
 
-                // Ищем хэш кода в папке sc
                 const scHash = await hashPass(sc);
                 const scSnap = await get(ref(db, 'sc'));
                 let foundRealName = null;
@@ -410,7 +406,6 @@
                     return errorEl.innerText = "Неверный секретный код";
                 }
 
-                // Регистрация: генерируем соль и сохраняем
                 const salt = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
                 const hp = await hashPass(p + salt);
 
@@ -419,8 +414,7 @@
                     salt: salt,
                     realName: foundRealName
                 });
-                
-                // Удаляем использованный код
+
                 await remove(ref(db, 'sc/' + foundRealName));
 
                 login(u);
@@ -440,7 +434,6 @@
         initChat();
     }
 
-    // Проверка сессии при загрузке страницы
     if(currentUser) {
         authBtn.disabled = true;
         authBtn.innerText = "Загрузка...";
@@ -454,11 +447,10 @@
                 authBtn.innerText = "Войти";
             }
         }).catch(() => {
-            login(currentUser); // fallback при ошибке сети
+            login(currentUser); 
         });
     }
 
-    // Смена пароля в настройках
     document.getElementById('change-pass-btn').onclick = async () => {
         const oldP = document.getElementById('settings-old-pass').value.trim();
         const newP = document.getElementById('settings-new-pass').value.trim();
@@ -479,14 +471,14 @@
                 const userData = snap.val();
                 const oldSalt = userData.salt || '';
                 const oldHash = await hashPass(oldP + oldSalt);
-                
+
                 if (userData.password !== oldHash) {
                     return errEl.innerText = "Неверный старый пароль";
                 }
 
                 const newSalt = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
                 const newHash = await hashPass(newP + newSalt);
-                
+
                 await update(userRef, { password: newHash, salt: newSalt });
 
                 errEl.style.color = "var(--read)";
@@ -557,7 +549,7 @@
             });
         }
         reactsHtml += '</div>';
-        return `${quote}<b style="color:var(--accent); font-size:13px">${data.username}</b><div>${md}</div>${reactsHtml}<div class="msg-meta">${edited} ${time} ${ticks}</div>`;
+        return `${quote}<b style="color:var(--accent); font-size:12px; display:block; margin-bottom: 2px;">${data.username}</b><div>${md}</div>${reactsHtml}<div class="msg-meta">${edited} ${time} ${ticks}</div>`;
     }
 
     window.scrollToMsg = (id) => {
@@ -634,12 +626,35 @@
     window.cancelInputState = () => { currentReply = null; editingId = null; document.getElementById('message-input').value = ""; document.getElementById('reply-bar').classList.add('hidden'); };
     document.getElementById('cancel-reply-btn').onclick = window.cancelInputState;
 
-    document.getElementById('send-btn').onclick = async () => {
+    const sendMessage = async () => {
         const inp = document.getElementById('message-input');
         const v = inp.value.trim(); if(!v) return;
         if (editingId) { await update(ref(db, 'chat_messages/' + editingId), { text: v, edited: true }); }
         else { await push(ref(db, 'chat_messages'), { username: currentUser, text: v, time: Date.now(), replyTo: currentReply }); }
         window.cancelInputState();
+    };
+
+    document.getElementById('send-btn').onclick = sendMessage;
+
+    // Keyboard handling
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    document.getElementById('message-input').onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            if (isMobile) {
+                // On mobile, Enter just adds a new line (default behavior)
+                return;
+            } else {
+                // On Desktop
+                if (e.shiftKey) {
+                    // Shift + Enter = new line (default)
+                    return;
+                } else {
+                    // Enter = send
+                    e.preventDefault();
+                    sendMessage();
+                }
+            }
+        }
     };
 
     const searchInput = document.getElementById('search-input');

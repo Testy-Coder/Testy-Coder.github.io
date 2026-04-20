@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-Нолики</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: #0f172a;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: #1e293b;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell:hover {
+            background: #334155;
+            transform: scale(1.02);
+        }
+
+        .cell.x { color: #f87171; text-shadow: 0 0 15px rgba(248, 113, 113, 0.5); }
+        .cell.o { color: #60a5fa; text-shadow: 0 0 15px rgba(96, 165, 250, 0.5); }
+
+        .ability-btn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .ability-btn:disabled {
+            filter: grayscale(1);
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-badge {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="setup-screen" class="max-w-md w-full bg-slate-800 p-8 rounded-2xl shadow-2xl text-center">
+        <h1 class="text-4xl font-black mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+            КРЕСТИКИ-НОЛИКИ<br><span class="text-2xl">ОНЛАЙН БИТВА</span>
+        </h1>
+        <div id="auth-status" class="mb-4 text-xs text-slate-500">Подключение к серверу...</div>
+        <div class="space-y-4">
+            <input id="room-id" type="text" placeholder="ID Комнаты (например: super-game)" class="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white font-bold">
+            <button id="join-btn" disabled class="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition-colors disabled:opacity-50">Играть!</button>
+        </div>
+        <p class="mt-4 text-slate-400 text-sm">Введите одинаковый ID с другом, чтобы играть вместе.</p>
+    </div>
+
+    <div id="game-screen" class="hidden w-full max-w-4xl grid md:grid-cols-2 gap-8 items-start">
+        <div class="space-y-6">
+            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl">
+                <div>
+                    <p class="text-xs text-slate-400 uppercase tracking-widest font-bold">Комната</p>
+                    <p id="display-room-id" class="font-mono text-blue-400">---</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-slate-400 uppercase tracking-widest font-bold">Ваш символ</p>
+                    <p id="user-side" class="text-xl font-black">?</p>
+                </div>
+            </div>
+
+            <div id="turn-indicator" class="text-center py-2 rounded-lg font-bold bg-slate-700">
+                Загрузка...
+            </div>
+
+            <div class="game-grid" id="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 p-6 rounded-2xl space-y-6">
+            <h2 class="text-xl font-black flex items-center gap-2">
+                <span class="p-2 bg-yellow-500 rounded-lg text-black text-sm">🔥</span> 
+                СУПЕРСПОСОБНОСТИ
+            </h2>
+            
+            <div class="grid gap-4">
+                <button id="ability-freeze" class="ability-btn flex items-center gap-4 p-4 bg-cyan-900/40 hover:bg-cyan-800/60 border border-cyan-500/30 rounded-xl text-left" disabled>
+                    <div class="text-2xl">❄️</div>
+                    <div>
+                        <div class="font-bold">ЗАМОРОЗКА</div>
+                        <div class="text-xs text-cyan-300">Враг пропустит ход</div>
+                    </div>
+                </button>
+
+                <button id="ability-bomb" class="ability-btn flex items-center gap-4 p-4 bg-orange-900/40 hover:bg-orange-800/60 border border-orange-500/30 rounded-xl text-left" disabled>
+                    <div class="text-2xl">💣</div>
+                    <div>
+                        <div class="font-bold">БОМБА</div>
+                        <div class="text-xs text-orange-300">Очистить любую клетку</div>
+                    </div>
+                </button>
+
+                <button id="ability-double" class="ability-btn flex items-center gap-4 p-4 bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/30 rounded-xl text-left" disabled>
+                    <div class="text-2xl">⚡</div>
+                    <div>
+                        <div class="font-bold">ДВОЙНОЙ ХОД</div>
+                        <div class="text-xs text-purple-300">Ходите дважды подряд</div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="p-4 bg-slate-900/50 rounded-xl">
+                <h3 class="text-sm font-bold text-slate-400 mb-2">ЛОГ БИТВЫ</h3>
+                <div id="game-log" class="text-xs h-32 overflow-y-auto space-y-1 font-mono text-slate-300">
+                    <div>Ожидание подключения...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-overlay" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 p-8 rounded-2xl max-w-sm w-full text-center shadow-2xl border border-slate-700">
+            <div id="modal-icon" class="text-6xl mb-4">🏆</div>
+            <h2 id="modal-title" class="text-2xl font-black mb-2">ПОБЕДА!</h2>
+            <p id="modal-body" class="text-slate-400 mb-6"></p>
+            <button onclick="location.reload()" class="px-8 py-3 bg-blue-600 rounded-lg font-bold hover:bg-blue-500 transition-colors">В меню</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDIGhEhZkSAssATbM6l5vMfemwn2_zvRU8",
+            authDomain: "testy-xo-online.firebaseapp.com",
+            databaseURL: "https://testy-xo-online-default-rtdb.firebaseio.com",
+            projectId: "testy-xo-online",
+            storageBucket: "testy-xo-online.firebasestorage.app",
+            messagingSenderId: "936157001796",
+            appId: "1:936157001796:web:be2446bc94a4934507a411",
+            measurementId: "G-1SV5T0W8KW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'xo-abilities-v1';
+        const appId = rawAppId.replace(/[.#$\[\]]/g, '_');
+
+        let currentRoom = null;
+        let mySymbol = null;
+        let user = null;
+        let activeAbility = null;
+        let gameState = {
+            board: ["", "", "", "", "", "", "", "", ""],
+            turn: "X",
+            players: [],
+            winner: null,
+            abilitiesUsed: { X: [""], O: [""] },
+            freezeNext: "",
+            doubleMove: false
+        };
+
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const roomIdInput = document.getElementById('room-id');
+        const joinBtn = document.getElementById('join-btn');
+        const boardEl = document.getElementById('board');
+        const turnIndicator = document.getElementById('turn-indicator');
+        const userSideEl = document.getElementById('user-side');
+        const gameLog = document.getElementById('game-log');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const authStatus = document.getElementById('auth-status');
+
+        const initAuth = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (anonErr) {
+                console.warn("Anonymous auth failed", anonErr);
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    }
+                } catch (customErr) {
+                    console.error("Auth error", customErr);
+                    authStatus.innerText = "Ошибка авторизации";
+                }
+            }
+        };
+
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            if (user) {
+                authStatus.innerText = "Подключено";
+                joinBtn.disabled = false;
+            }
+        });
+
+        initAuth();
+
+        joinBtn.onclick = async () => {
+            let rid = roomIdInput.value.trim();
+            if (!rid) return;
+            rid = rid.replace(/[.#$\[\]]/g, '_');
+            currentRoom = rid;
+            await enterRoom(rid);
+        };
+
+        async function enterRoom(roomId) {
+            if (!user) return;
+
+            const roomPath = `rooms/${appId}/${roomId}`;
+            const roomRef = ref(db, roomPath);
+            const snapshot = await get(roomRef);
+
+            if (!snapshot.exists()) {
+                gameState.players = [user.uid];
+                mySymbol = 'X';
+                await set(roomRef, gameState);
+            } else {
+                const data = snapshot.val();
+                const players = data.players || [];
+                if (players.includes(user.uid)) {
+                    mySymbol = players[0] === user.uid ? 'X' : 'O';
+                } else if (players.length < 2) {
+                    mySymbol = 'O';
+                    players.push(user.uid);
+                    await update(roomRef, { players: players });
+                } else {
+                    alert("Комната полная!");
+                    return;
+                }
+            }
+
+            setupScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            document.getElementById('display-room-id').innerText = roomId;
+            userSideEl.innerText = mySymbol;
+            userSideEl.className = `text-xl font-black ${mySymbol.toLowerCase()}`;
+
+            // Слушатель изменений в комнате
+            onValue(roomRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Если второй игрок подключился, выводим сообщение в лог один раз
+                    if (gameState.players.length === 1 && data.players && data.players.length === 2) {
+                        addLog("⚔️ Соперник подключился! Битва начинается!");
+                    }
+                    renderGame(data);
+                }
+            });
+        }
+
+        function renderGame(data) {
+            gameState = data;
+            const cells = boardEl.querySelectorAll('.cell');
+            const board = data.board || Array(9).fill("");
+            
+            board.forEach((val, i) => {
+                cells[i].innerText = val;
+                cells[i].className = `cell ${val.toLowerCase()}`;
+            });
+
+            if (data.winner) {
+                showWinner(data.winner);
+                turnIndicator.innerText = "Игра окончена";
+                turnIndicator.className = "text-center py-2 rounded-lg font-bold bg-green-600";
+            } else if (!data.players || data.players.length < 2) {
+                turnIndicator.innerText = "Ожидание соперника...";
+                turnIndicator.className = "text-center py-2 rounded-lg font-bold bg-slate-700 status-badge";
+            } else {
+                const isMyTurn = data.turn === mySymbol;
+                turnIndicator.innerText = isMyTurn ? "ВАШ ХОД" : `Ход игрока ${data.turn}`;
+                turnIndicator.className = isMyTurn ? "text-center py-2 rounded-lg font-bold bg-blue-600 status-badge" : "text-center py-2 rounded-lg font-bold bg-slate-700";
+                updateAbilitiesUI(isMyTurn);
+            }
+        }
+
+        function updateAbilitiesUI(isMyTurn) {
+            const used = (gameState.abilitiesUsed && gameState.abilitiesUsed[mySymbol]) || [];
+            const btnFreeze = document.getElementById('ability-freeze');
+            const btnBomb = document.getElementById('ability-bomb');
+            const btnDouble = document.getElementById('ability-double');
+
+            // Способности работают только если в игре 2 человека
+            const canUse = isMyTurn && gameState.players && gameState.players.length === 2;
+
+            btnFreeze.disabled = !canUse || used.includes('freeze') || activeAbility;
+            btnBomb.disabled = !canUse || used.includes('bomb') || activeAbility;
+            btnDouble.disabled = !canUse || used.includes('double') || activeAbility;
+
+            [btnFreeze, btnBomb, btnDouble].forEach(b => b.classList.remove('ring-4', 'ring-white'));
+            if (activeAbility) {
+                const activeBtn = document.getElementById(`ability-${activeAbility}`);
+                if (activeBtn) activeBtn.classList.add('ring-4', 'ring-white');
+            }
+        }
+
+        boardEl.addEventListener('click', async (e) => {
+            const cell = e.target.closest('.cell');
+            if (!cell || !currentRoom || gameState.winner || !gameState.players || gameState.players.length < 2) return;
+            
+            const index = parseInt(cell.dataset.index);
+            const isMyTurn = gameState.turn === mySymbol;
+
+            if (!isMyTurn && activeAbility !== 'bomb') return;
+            const roomRef = ref(db, `rooms/${appId}/${currentRoom}`);
+
+            if (activeAbility === 'bomb') {
+                const newBoard = [...(gameState.board || Array(9).fill(""))];
+                newBoard[index] = "";
+                const usedList = Array.isArray(gameState.abilitiesUsed[mySymbol]) ? gameState.abilitiesUsed[mySymbol] : [];
+                const newUsed = [...usedList, 'bomb'];
+                
+                addLog(`💣 Игрок ${mySymbol} взорвал клетку ${index + 1}!`);
+                await update(roomRef, { 
+                    board: newBoard, 
+                    [`abilitiesUsed/${mySymbol}`]: newUsed 
+                });
+                activeAbility = null;
+                updateAbilitiesUI(isMyTurn);
+                return;
+            }
+
+            if (gameState.board && gameState.board[index] !== "") return;
+
+            const newBoard = [...(gameState.board || Array(9).fill(""))];
+            newBoard[index] = mySymbol;
+            let nextTurn = gameState.turn === 'X' ? 'O' : 'X';
+            let freezeEffect = gameState.freezeNext || "";
+            let doubleEffect = gameState.doubleMove || false;
+
+            if (doubleEffect) {
+                nextTurn = mySymbol;
+                doubleEffect = false;
+                addLog(`⚡ ${mySymbol} делает повторный ход!`);
+            } else if (freezeEffect === nextTurn) {
+                nextTurn = mySymbol;
+                freezeEffect = "";
+                addLog(`❄️ ${mySymbol} ходит снова, пока враг заморожен!`);
+            }
+
+            const winner = checkWinner(newBoard);
+            await update(roomRef, {
+                board: newBoard,
+                turn: nextTurn,
+                winner: winner || null,
+                freezeNext: freezeEffect,
+                doubleMove: doubleEffect
+            });
+        });
+
+        document.getElementById('ability-freeze').onclick = () => activateAbilityNow('freeze');
+        document.getElementById('ability-bomb').onclick = () => {
+            activeAbility = 'bomb';
+            addLog("🎯 Выберите любую клетку для взрыва!");
+            updateAbilitiesUI(true);
+        };
+        document.getElementById('ability-double').onclick = () => activateAbilityNow('double');
+
+        async function activateAbilityNow(type) {
+            if (!currentRoom) return;
+            const roomRef = ref(db, `rooms/${appId}/${currentRoom}`);
+            const usedList = Array.isArray(gameState.abilitiesUsed[mySymbol]) ? gameState.abilitiesUsed[mySymbol] : [];
+            const newUsed = [...usedList, type];
+            
+            let updates = { [`abilitiesUsed/${mySymbol}`]: newUsed };
+
+            if (type === 'freeze') {
+                updates.freezeNext = mySymbol === 'X' ? 'O' : 'X';
+                addLog(`❄️ ${mySymbol} применил ЗАМОРОЗКУ!`);
+            } else if (type === 'double') {
+                updates.doubleMove = true;
+                addLog(`⚡ ${mySymbol} применил ДВОЙНОЙ ХОД!`);
+            }
+            await update(roomRef, updates);
+            activeAbility = null;
+        }
+
+        function checkWinner(b) {
+            const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            for (let l of lines) {
+                if (b[l[0]] && b[l[0]] === b[l[1]] && b[l[0]] === b[l[2]]) return b[l[0]];
+            }
+            return b.includes("") ? null : "Ничья";
+        }
+
+        function showWinner(winner) {
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+            const icon = document.getElementById('modal-icon');
+            if (winner === "Ничья") {
+                title.innerText = "НИЧЬЯ";
+                body.innerText = "Никто не смог победить.";
+                icon.innerText = "🤝";
+            } else {
+                title.innerText = winner === mySymbol ? "ПОБЕДА!" : "ПОРАЖЕНИЕ";
+                body.innerText = winner === mySymbol ? "Ваши способности привели к успеху!" : "Соперник оказался хитрее.";
+                icon.innerText = winner === mySymbol ? "🏆" : "💀";
+            }
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function addLog(msg) {
+            const div = document.createElement('div');
+            div.innerText = `> ${msg}`;
+            gameLog.prepend(div);
+        }
+    </script>
+</body>
+</html>

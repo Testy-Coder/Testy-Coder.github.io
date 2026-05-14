@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestyColor — Палитра</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .color-canvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .slider-hue {
+            background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+        }
+        .custom-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .history-item:hover .delete-btn {
+            display: flex;
+        }
+        .check-icon {
+            display: none;
+        }
+        .copied .check-icon {
+            display: block;
+        }
+        .copied .copy-icon {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 text-center md:text-left flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">ColorMaster Pro</h1>
+                <p class="text-slate-500">Профессиональный инструмент для работы с цветом</p>
+            </div>
+            <div id="main-preview" class="h-16 w-32 rounded-xl shadow-inner border-4 border-white custom-shadow transition-colors duration-200"></div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-white p-5 rounded-2xl custom-shadow">
+                    <!-- Saturation/Brightness Canvas -->
+                    <div class="relative w-full aspect-square rounded-lg overflow-hidden color-canvas mb-4" id="canvas-container">
+                        <canvas id="color-canvas" class="w-full h-full"></canvas>
+                        <div id="picker-cursor" class="absolute w-5 h-5 border-2 border-white rounded-full shadow-md -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                    </div>
+
+                    <!-- Hue Slider -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-slate-400 mb-1 block">Оттенок</label>
+                            <input type="range" id="hue-slider" min="0" max="360" value="0" class="w-full h-3 rounded-lg appearance-none slider-hue cursor-pointer">
+                        </div>
+                        <!-- Alpha Slider -->
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-slate-400 mb-1 block">Прозрачность</label>
+                            <div class="relative h-3 w-full rounded-lg bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')] bg-slate-200">
+                                <input type="range" id="alpha-slider" min="0" max="100" value="100" class="absolute inset-0 w-full h-3 rounded-lg appearance-none bg-transparent cursor-pointer" style="background: linear-gradient(to right, transparent, currentColor);">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl custom-shadow">
+                    <h3 class="text-sm font-bold mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Контрастность (WCAG)
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div id="contrast-box-black" class="p-4 rounded-xl text-center border">
+                            <span class="text-lg font-bold block">Black</span>
+                            <span id="ratio-black" class="text-xs font-medium">1:1</span>
+                        </div>
+                        <div id="contrast-box-white" class="p-4 rounded-xl text-center border bg-slate-900 text-white">
+                            <span class="text-lg font-bold block">White</span>
+                            <span id="ratio-white" class="text-xs font-medium">1:1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 space-y-6">
+                <!-- Formats -->
+                <div class="bg-white p-6 rounded-2xl custom-shadow space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- HEX -->
+                        <div class="relative">
+                            <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">HEX</label>
+                            <div class="flex">
+                                <input type="text" id="input-hex" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" value="#FF0000">
+                                <button onclick="copyToClipboard('input-hex')" class="px-3 py-2 bg-slate-100 border border-l-0 border-slate-200 rounded-r-lg hover:bg-slate-200 transition-colors copy-btn">
+                                    <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <svg class="w-4 h-4 check-icon text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- RGB -->
+                        <div class="relative">
+                            <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">RGB</label>
+                            <div class="flex">
+                                <input type="text" id="input-rgb" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" value="rgb(255, 0, 0)">
+                                <button onclick="copyToClipboard('input-rgb')" class="px-3 py-2 bg-slate-100 border border-l-0 border-slate-200 rounded-r-lg hover:bg-slate-200 transition-colors copy-btn">
+                                    <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <svg class="w-4 h-4 check-icon text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- HSL -->
+                        <div class="relative">
+                            <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">HSL</label>
+                            <div class="flex">
+                                <input type="text" id="input-hsl" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" value="hsl(0, 100%, 50%)">
+                                <button onclick="copyToClipboard('input-hsl')" class="px-3 py-2 bg-slate-100 border border-l-0 border-slate-200 rounded-r-lg hover:bg-slate-200 transition-colors copy-btn">
+                                    <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <svg class="w-4 h-4 check-icon text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- CMYK -->
+                        <div class="relative">
+                            <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">CMYK</label>
+                            <div class="flex">
+                                <input type="text" id="input-cmyk" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" value="0, 100, 100, 0">
+                                <button onclick="copyToClipboard('input-cmyk')" class="px-3 py-2 bg-slate-100 border border-l-0 border-slate-200 rounded-r-lg hover:bg-slate-200 transition-colors copy-btn">
+                                    <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <svg class="w-4 h-4 check-icon text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="add-to-history" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all transform active:scale-95">Сохранить в палитру</button>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl custom-shadow">
+                    <h3 class="text-sm font-bold mb-4 uppercase text-slate-400 tracking-wider">Цветовые схемы</h3>
+                    <div class="space-y-6">
+                        <section>
+                            <p class="text-xs font-medium text-slate-500 mb-2">Комплементарный</p>
+                            <div id="scheme-complementary" class="flex h-12 rounded-lg overflow-hidden border border-slate-100"></div>
+                        </section>
+                        <section>
+                            <p class="text-xs font-medium text-slate-500 mb-2">Аналоговый</p>
+                            <div id="scheme-analogous" class="flex h-12 rounded-lg overflow-hidden border border-slate-100"></div>
+                        </section>
+                        <section>
+                            <p class="text-xs font-medium text-slate-500 mb-2">Триада</p>
+                            <div id="scheme-triad" class="flex h-12 rounded-lg overflow-hidden border border-slate-100"></div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="bg-white p-6 rounded-2xl custom-shadow">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold uppercase text-slate-400 tracking-wider">Палитра</h3>
+                        <button id="clear-history" class="text-xs text-red-500 hover:underline">Очистить</button>
+                    </div>
+                    <div id="history-list" class="flex flex-wrap gap-3">
+                        <!-- History items will be injected here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            h: 0,
+            s: 100,
+            v: 100,
+            a: 1,
+            history: JSON.parse(localStorage.getItem('colorHistory') || '[]')
+        };
+
+        const canvas = document.getElementById('color-canvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvas-container');
+        const hueSlider = document.getElementById('hue-slider');
+        const alphaSlider = document.getElementById('alpha-slider');
+        const pickerCursor = document.getElementById('picker-cursor');
+        const mainPreview = document.getElementById('main-preview');
+        const historyList = document.getElementById('history-list');
+
+        function hsvToRgb(h, s, v) {
+            s /= 100; v /= 100;
+            let i = Math.floor(h / 60);
+            let f = h / 60 - i;
+            let p = v * (1 - s);
+            let q = v * (1 - f * s);
+            let t = v * (1 - (1 - f) * s);
+            let r, g, b;
+            switch (i % 6) {
+                case 0: r = v, g = t, b = p; break;
+                case 1: r = q, g = v, b = p; break;
+                case 2: r = p, g = v, b = t; break;
+                case 3: r = p, g = q, b = v; break;
+                case 4: r = t, g = p, b = v; break;
+                case 5: r = v, g = p, b = q; break;
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function rgbToHsv(r, g, b) {
+            r /= 255, g /= 255, b /= 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, v = max;
+            let d = max - min;
+            s = max === 0 ? 0 : d / max;
+            if (max === min) {
+                h = 0;
+            } else {
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: h * 360, s: s * 100, v: v * 100 };
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+        }
+
+        function rgbToCmyk(r, g, b) {
+            let c = 1 - (r / 255);
+            let m = 1 - (g / 255);
+            let y = 1 - (b / 255);
+            let k = Math.min(c, Math.min(m, y));
+            if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
+            c = Math.round(((c - k) / (1 - k)) * 100);
+            m = Math.round(((m - k) / (1 - k)) * 100);
+            y = Math.round(((y - k) / (1 - k)) * 100);
+            k = Math.round(k * 100);
+            return { c, m, y, k };
+        }
+
+        function getLuminance(r, g, b) {
+            let [rs, gs, bs] = [r, g, b].map(v => {
+                v /= 255;
+                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+        }
+
+        function getContrastRatio(l1, l2) {
+            let brightest = Math.max(l1, l2);
+            let darkest = Math.min(l1, l2);
+            return (brightest + 0.05) / (darkest + 0.05);
+        }
+
+        function drawCanvas() {
+            const width = canvas.width = canvasContainer.offsetWidth;
+            const height = canvas.height = canvasContainer.offsetHeight;
+
+            ctx.fillStyle = `hsl(${state.h}, 100%, 50%)`;
+            ctx.fillRect(0, 0, width, height);
+
+            let gradientWhite = ctx.createLinearGradient(0, 0, width, 0);
+            gradientWhite.addColorStop(0, 'rgba(255,255,255,1)');
+            gradientWhite.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gradientWhite;
+            ctx.fillRect(0, 0, width, height);
+
+            let gradientBlack = ctx.createLinearGradient(0, 0, 0, height);
+            gradientBlack.addColorStop(0, 'rgba(0,0,0,0)');
+            gradientBlack.addColorStop(1, 'rgba(0,0,0,1)');
+            ctx.fillStyle = gradientBlack;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function updateUI() {
+            const rgb = hsvToRgb(state.h, state.s, state.v);
+            const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+            const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+            const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+            const colorWithAlpha = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${state.a})`;
+
+            // Update Preview
+            mainPreview.style.backgroundColor = colorWithAlpha;
+            pickerCursor.style.left = `${state.s}%`;
+            pickerCursor.style.top = `${100 - state.v}%`;
+            pickerCursor.style.backgroundColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            
+            // Update Inputs
+            document.getElementById('input-hex').value = hex;
+            document.getElementById('input-rgb').value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            document.getElementById('input-hsl').value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+            document.getElementById('input-cmyk').value = `${cmyk.c}, ${cmyk.m}, ${cmyk.y}, ${cmyk.k}`;
+            
+            // Contrast
+            const lum = getLuminance(rgb.r, rgb.g, rgb.b);
+            const ratioWhite = getContrastRatio(lum, 1).toFixed(2);
+            const ratioBlack = getContrastRatio(lum, 0).toFixed(2);
+            
+            document.getElementById('ratio-white').innerText = `${ratioWhite}:1`;
+            document.getElementById('ratio-black').innerText = `${ratioBlack}:1`;
+            document.getElementById('contrast-box-white').style.backgroundColor = hex;
+            document.getElementById('contrast-box-white').style.color = '#FFFFFF';
+            document.getElementById('contrast-box-black').style.backgroundColor = hex;
+            document.getElementById('contrast-box-black').style.color = '#000000';
+
+            updateSchemes(state.h, state.s, state.v);
+            alphaSlider.style.color = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+        }
+
+        function updateSchemes(h, s, v) {
+            const renderScheme = (containerId, angles) => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                angles.forEach(angle => {
+                    const newH = (h + angle + 360) % 360;
+                    const rgb = hsvToRgb(newH, s, v);
+                    const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                    const el = document.createElement('div');
+                    el.className = 'flex-1 cursor-pointer hover:opacity-90 transition-opacity';
+                    el.style.backgroundColor = hex;
+                    el.title = hex;
+                    el.onclick = () => setColorFromHex(hex);
+                    container.appendChild(el);
+                });
+            };
+
+            renderScheme('scheme-complementary', [0, 180]);
+            renderScheme('scheme-analogous', [-30, 0, 30]);
+            renderScheme('scheme-triad', [0, 120, 240]);
+        }
+
+        function setColorFromHex(hex) {
+            const rgb = hexToRgb(hex);
+            if (rgb) {
+                const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+                state.h = hsv.h;
+                state.s = hsv.s;
+                state.v = hsv.v;
+                hueSlider.value = hsv.h;
+                drawCanvas();
+                updateUI();
+            }
+        }
+
+        function handleCanvasInteraction(e) {
+            const rect = canvas.getBoundingClientRect();
+            let x = (e.clientX || e.touches[0].clientX) - rect.left;
+            let y = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            x = Math.max(0, Math.min(x, rect.width));
+            y = Math.max(0, Math.min(y, rect.height));
+            
+            state.s = (x / rect.width) * 100;
+            state.v = 100 - (y / rect.height) * 100;
+            
+            updateUI();
+        }
+
+        let isDragging = false;
+        canvasContainer.addEventListener('mousedown', (e) => { isDragging = true; handleCanvasInteraction(e); });
+        window.addEventListener('mousemove', (e) => { if (isDragging) handleCanvasInteraction(e); });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+        
+        canvasContainer.addEventListener('touchstart', (e) => { isDragging = true; handleCanvasInteraction(e); }, {passive: false});
+        window.addEventListener('touchmove', (e) => { if (isDragging) handleCanvasInteraction(e); }, {passive: false});
+        window.addEventListener('touchend', () => { isDragging = false; });
+
+        hueSlider.addEventListener('input', (e) => {
+            state.h = parseInt(e.target.value);
+            drawCanvas();
+            updateUI();
+        });
+
+        alphaSlider.addEventListener('input', (e) => {
+            state.a = e.target.value / 100;
+            updateUI();
+        });
+
+        document.getElementById('input-hex').addEventListener('change', (e) => {
+            setColorFromHex(e.target.value);
+        });
+
+        function saveHistory() {
+            const rgb = hsvToRgb(state.h, state.s, state.v);
+            const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+            if (!state.history.includes(hex)) {
+                state.history.unshift(hex);
+                if (state.history.length > 20) state.history.pop();
+                localStorage.setItem('colorHistory', JSON.stringify(state.history));
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            historyList.innerHTML = '';
+            state.history.forEach(hex => {
+                const item = document.createElement('div');
+                item.className = 'history-item relative group w-10 h-10 rounded-lg cursor-pointer shadow-sm border border-slate-200 transition-transform hover:scale-110';
+                item.style.backgroundColor = hex;
+                item.onclick = () => setColorFromHex(hex);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] hidden items-center justify-center';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    state.history = state.history.filter(h => h !== hex);
+                    localStorage.setItem('colorHistory', JSON.stringify(state.history));
+                    renderHistory();
+                };
+                
+                item.appendChild(deleteBtn);
+                historyList.appendChild(item);
+            });
+        }
+
+        document.getElementById('add-to-history').onclick = saveHistory;
+        document.getElementById('clear-history').onclick = () => {
+            state.history = [];
+            localStorage.removeItem('colorHistory');
+            renderHistory();
+        };
+
+        function copyToClipboard(id) {
+            const input = document.getElementById(id);
+            const btn = input.nextElementSibling;
+            
+            const temp = document.createElement('textarea');
+            temp.value = input.value;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            
+            btn.classList.add('copied');
+            setTimeout(() => btn.classList.remove('copied'), 2000);
+        }
+
+        window.onload = () => {
+            drawCanvas();
+            updateUI();
+            renderHistory();
+        };
+
+        window.onresize = drawCanvas;
+    </script>
+</body>
+</html>
